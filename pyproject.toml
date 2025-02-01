@@ -1,0 +1,47 @@
+# main docs of setup tools: https://setuptools.pypa.io/en/latest/userguide/quickstart.html
+# pypip tutoral: https://packaging.python.org/en/latest/tutorials/packaging-projects/
+# Video Tutorial: https://www.youtube.com/watch?v=v6tALyc4C10
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+include-package-data = true # to include data directories
+
+[project]
+name = "recitations-segmenter"
+version = "1.0.0"
+authors = [
+  { name="Abdullah", email="abdullahamlyossef@gmail.com" },
+]
+description = "Split The Holy Quran Recitations based on وقف (pause)"
+readme = "README.md"
+dependencies = [
+  "pypdl==1.4.4",
+  "quran-transcript @ git+https://github.com/obadx/quran-transcript.git",
+  "filetype==1.2.0",
+  "mutagen==1.47.0",
+  "torch",
+  "torchaudio",
+  "pyyaml",
+  "librosa",
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+# Optional dependencies
+[project.optional-dependencies]
+train = [
+  "datasets",
+  "huggingface_hub",
+]
+
+[project.urls]
+Homepage = "https://github.com/obadx/recitations-segmenter"
+Issues = "https://github.com/obadx/recitations-segmenter/issues"
+
+# # for addint data: https://setuptools.pypa.io/en/latest/userguide/datafiles.html#package-data
+[tool.setuptools.package-data]
+quran_transcript = ["data/*"]
