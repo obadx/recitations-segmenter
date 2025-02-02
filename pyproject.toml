@@ -20,6 +20,7 @@ dependencies = [
   "filetype==1.2.0",
   "mutagen==1.47.0",
   "torch",
+  "numpy",
   "torchaudio",
   "pyyaml",
   "librosa",
