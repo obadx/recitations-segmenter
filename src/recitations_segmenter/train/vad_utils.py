@@ -72,13 +72,15 @@ def remove_silence_intervals(
     """Merging slilecne segments (< min_silence_duration_samples)  to speech segments
     Example: speech
     """
+    device = intervals.device
     # remove silence intervals
     intervals = intervals.view(-1)
     intrval_diffs = torch.diff(intervals)
     silence_intervals = intrval_diffs[1: len(intrval_diffs): 2]
     silence_mask = silence_intervals >= min_silence_duration_samples
     mask = silence_mask.view(-1, 1).repeat(1, 2).reshape(-1)
-    mask = torch.cat([torch.tensor([True]), mask, torch.tensor([True])], dim=0)
+    mask = torch.cat([torch.tensor([True], device=device),
+                     mask, torch.tensor([True], device=device)], dim=0)
     intervals = intervals[mask].view(-1, 2)
     return intervals
 
@@ -119,6 +121,8 @@ def quran_split_by_silence(
             * pobs: (torch.FloatTensor): the average probabilty for every speech segment for `intervals` without cleaning. Same shape as `intervlas`.
                 If `return_probabilities` is `True` else return `None`
     """
+    assert isinstance(wav, torch.Tensor), (
+        f'`wav` should be tensor got `{type(wav)}`')
     # paddign wav
     pad_len = window_size_samples - (wav.shape[0] % window_size_samples)
     wav_input = torch.nn.functional.pad(
@@ -131,13 +135,13 @@ def quran_split_by_silence(
     model.eval()
     wav_input = wav_input.to(device)
 
-    probs = []
-    for wav_window in wav_input:
-        probs.append(model(wav_window, sample_rate).cpu().item())
-    probs = torch.tensor(probs)
+    probs = torch.zeros(wav_input.shape[0], device=device)
+    for idx, wav_window in enumerate(wav_input):
+        probs[idx] = model(wav_window, sample_rate)
 
     # extracting intervals
-    diffs = torch.diff(probs > threshold, prepend=torch.tensor([False]))
+    diffs = torch.diff(probs > threshold,
+                       prepend=torch.tensor([False], device=device))
     intervals = torch.arange(probs.shape[0], device=device)[diffs]
 
     # no silence at the end of the track
