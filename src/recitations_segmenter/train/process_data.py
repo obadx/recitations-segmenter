@@ -12,7 +12,7 @@ from ..utils import (
     save_jsonl,
     SURA_TO_AYA_COUNT,
 )
-from .vad_utils import quran_split_by_silence
+from .vad_utils import quran_split_by_silence_batch, load_vad_model
 
 
 @dataclass
@@ -25,6 +25,7 @@ class Recitation:
     window_size_samples: int = 1536
     threshold: float = 0.3
     min_silence_duration_ms: float = 300
+    min_speech_duration_ms: float = 700
     pad_duration_ms: float = 30
 
 
@@ -89,36 +90,55 @@ def generate_ds(recitation: Recitation, ds_path: Path) -> Dataset:
     return ds['train']
 
 
+def intervals_map(batch, recitation: Recitation, device='cpu', model=None,):
+    waves = [torch.tensor(i['array'], dtype=torch.float32)
+             for i in batch['audio']]
+    outs = quran_split_by_silence_batch(
+        waves,
+        model=model,
+        window_size_samples=recitation.window_size_samples,
+        min_silence_duration_ms=recitation.min_silence_duration_ms,
+        min_speech_duration_ms=recitation.min_speech_duration_ms,
+        pad_duration_ms=recitation.pad_duration_ms,
+        threshold=recitation.threshold,
+        sample_rate=16000,
+        device=device,
+    )
+    completes = []
+    speech_intervals = []
+    for out in outs:
+        is_complete = out.clean_intervals.view(-1,)[-1] != float('inf')
+        completes.append(is_complete)
+        speech_intervals.append(out.clean_intervals.cpu().numpy())
+
+    return {
+        'speech_intervals': speech_intervals,
+        'is_interval_complete': completes,
+    }
+
+
 def extarct_speech_intervals(
     dataset: Dataset,
-    recitiation: Recitation,
-    num_proc=8,
+    recitation: Recitation,
+    batch_size=256,
+    device='cuda',
+    model=None,
 ) -> Dataset:
 
-    def intervals_map(item):
-        out = quran_split_by_silence(
-            torch.tensor(item['audio']['array'], dtype=torch.float32),
-            window_size_samples=recitiation.window_size_samples,
-            min_silence_duration_ms=recitiation.min_silence_duration_ms,
-            pad_duration_ms=recitiation.pad_duration_ms,
-            threshold=recitiation.threshold,
-            sample_rate=16000,
-            device='cuda',
-        )
-        is_complete = out.clean_intervals.view(-1,)[-1] != float('inf')
-        return {
-            'speech_intervals': out.clean_intervals.cpu().numpy(),
-            'is_interval_complete': is_complete,
-        }
-
-    ds = dataset.map(intervals_map, num_proc=num_proc)
+    ds = dataset.map(
+        intervals_map,
+        batched=True,
+        batch_size=batch_size,
+        fn_kwargs={'model': model, 'device': device, 'recitation': recitation},
+    )
     return ds
 
 
 def to_huggingface_dataset(
     recitations_file: str | Path,
     base_dir='data',
-    num_proc=8,
+    batch_size=256,
+    device='cuda',
     limit: int = None,
 ) -> DatasetDict:
     """Converting Audio files to hugginface audio dataset
@@ -162,6 +182,7 @@ def to_huggingface_dataset(
     print(dataset_dict)
 
     # extract speech intervals
+    model = load_vad_model().to(device)
     for rec_id in dataset_dict:
         id = int(rec_id.split('_')[-1])
         ds = dataset_dict[rec_id]
@@ -169,7 +190,11 @@ def to_huggingface_dataset(
             ds = ds.select(range(limit))
 
         dataset_dict[rec_id] = extarct_speech_intervals(
-            ds, idx_to_recitation[id])
+            ds, idx_to_recitation[id],
+            device=device,
+            batch_size=batch_size,
+            model=model,
+        )
     dataset_dict = dataset_dict.cast_column(
         'speech_intervals', Array2D(shape=(None, 2), dtype="float32"))
 
