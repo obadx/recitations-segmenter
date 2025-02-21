@@ -58,10 +58,6 @@ def load_vad_model():
 
 @dataclass
 class SegmentationOutput:
-    clean_intervals: torch.FloatTensor
-    intervals: torch.FloatTensor
-    probs: torch.FloatTensor
-
     """
     Attrubutes:
         intervlas (torch.FloatTensor): the actual speech intervlas of the model without any cleaning (in seconds)
@@ -69,10 +65,18 @@ class SegmentationOutput:
         clean_intervlas (torch.FloatTensor): the speech intervlas after merging short silecne intervals (< min_silence_duration_ms) in seconds
     """
 
+    clean_intervals: torch.FloatTensor
+    intervals: torch.FloatTensor
+    probs: torch.FloatTensor
+
+    def clean_gpu(self):
+        del self.clean_intervals
+        del self.intervals
+        del self.probs
+
 
 def remove_small_speech_intervals(
-    intervals: torch.tensor,
-    min_speech_duration_samples,
+    intervals: torch.tensor, min_speech_duration_samples,
 ) -> torch.tensor:
     """Remove speech segments (< min_speech_duration_samples)  to speech segments
     Example: speech
@@ -231,7 +235,7 @@ def quran_split_by_silence_batch(
     pad_duration_ms=30,
     device=torch.device('cpu'),
     return_probabilities=False,
-) -> SegmentationOutput:
+) -> list[SegmentationOutput]:
     """Extractes Speech Intervals from input `wav`
 
     Extractes speech Intervals using https://github.com/snakers4/silero-vad/tree/v4.0stable v4.0 model
