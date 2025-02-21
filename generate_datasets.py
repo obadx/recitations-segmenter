@@ -1,11 +1,12 @@
-from recitations_segmenter.train.process_data import to_huggingface_dataset
+from recitations_segmenter.train.process_data import to_huggingface_16k_dataset, save_to_disk
 
 if __name__ == '__main__':
+    downlaod_dir = './data'
     recitations_file = './recitations.yml'
-    ds = to_huggingface_dataset(
-        recitations_file, base_dir='./data', limit=512, batch_size=256)
+    out_path = '../segment-ds.hf'
+    samples_per_shard = 128
+
+    ds = to_huggingface_16k_dataset(recitations_file, base_dir=downlaod_dir)
     print(ds)
 
-    for idx, item in enumerate(ds['recitation_0']):
-        for k, v in item.items():
-            print(f'{k}:\n{v}\n\n')
+    save_to_disk(ds, out_path=out_path, samples_per_shard=samples_per_shard)
