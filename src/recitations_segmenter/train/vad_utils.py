@@ -173,7 +173,8 @@ def quran_split_by_silence(
 
     # no silence at the end of the track
     if intervals.shape[0] % 2 != 0:
-        intervals = torch.cat([intervals, torch.tensor([float('inf')])])
+        intervals = torch.cat(
+            [intervals, torch.tensor([float('inf')], device=device)])
 
     # scaling to frames instead of mulitple of window_size_samples
     intervals = intervals.view(-1, 2) * window_size_samples
@@ -302,7 +303,8 @@ def quran_split_by_silence_batch(
 
         # no silence at the end of the track
         if intervals.shape[0] % 2 != 0:
-            intervals = torch.cat([intervals, torch.tensor([float('inf')])])
+            intervals = torch.cat(
+                [intervals, torch.tensor([float('inf')], device=device)])
 
         # scaling to frames instead of mulitple of window_size_samples
         intervals = intervals.view(-1, 2) * window_size_samples
