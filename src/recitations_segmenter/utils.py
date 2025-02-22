@@ -393,7 +393,7 @@ def download_file_fast(
     out_path: str | Path,
     extract_zip=True,
     hash_download=False,
-    num_download_segments=20,
+    num_download_segments=10,
     num_unzip_workers=12,
     remove_zipfile=True,
     redownload=False,
