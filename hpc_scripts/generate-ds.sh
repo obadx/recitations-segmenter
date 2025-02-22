@@ -2,10 +2,11 @@
 
 #SBATCH --job-name=GenerateSegmentDS
 #SBATCH --account=shams035
+#SBATCH --partition=cpu
 #SBATCH --output=generate-ds.out
 #SBATCH --time=1-01:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=24
 
 
 
