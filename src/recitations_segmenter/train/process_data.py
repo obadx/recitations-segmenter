@@ -26,7 +26,17 @@ DS_FEATURES = Features({
     'url': Value(dtype='string'),
     'audio': Audio(),
     'speech_intervals': Array2D(shape=(None, 2), dtype="float32"),
+    'is_interval_complete': Value(dtype='bool'),
+})
 
+DS_FEATURES_PROCESSED = Features({
+    'aya_name': Value(dtype='string'),
+    'reciter_name': Value(dtype='string'),
+    'recitation_id': Value(dtype='int32'),
+    'url': Value(dtype='string'),
+    'audio': Audio(sampling_rate=16000),
+    'speech_intervals': Array2D(shape=(None, 2), dtype="float32"),
+    'is_interval_complete': Value(dtype='bool'),
 })
 
 
@@ -225,26 +235,8 @@ def intervals_map(batch, idx_to_recitation: dict[int, Recitation], device='cpu',
     }
 
 
-def extarct_speech_intervals(
-    dataset: Dataset,
-    recitation: Recitation,
-    batch_size=256,
-    device='cuda',
-    model=None,
-) -> Dataset:
-
-    ds = dataset.map(
-        intervals_map,
-        batched=True,
-        batch_size=batch_size,
-        fn_kwargs={'model': model, 'device': device, 'recitation': recitation},
-    )
-    return ds
-
-
 def to_huggingface_16k_dataset(
     recitations_file: str | Path,
-    ds_path='',
     base_dir='data',
 ) -> IterableDatasetDict:
     """Converting Audio files to hugginface audio dataset and downsample to 16k
@@ -281,23 +273,6 @@ def to_huggingface_16k_dataset(
     for rec in recitations:
         dataset_dict[f'recitation_{rec.id}'] = rec.dataset
 
-    # # extract speech intervals
-    # for rec_id in dataset_dict:
-    #     id = int(rec_id.split('_')[-1])
-    #     ds = dataset_dict[rec_id]
-    #     if limit:
-    #         ds = ds.select(range(limit))
-    #
-    #     dataset_dict[rec_id] = extarct_speech_intervals(
-    #         ds, idx_to_recitation[id],
-    #         device=device,
-    #         batch_size=batch_size,
-    #         model=vad_model,
-    #     )
-    # TODO:
-    # dataset_dict = dataset_dict.cast_column(
-    #     'speech_intervals', Array2D(shape=(None, 2), dtype="float32"))
-
     return dataset_dict
 
 
@@ -318,18 +293,7 @@ def extract_speech_interval_from_ds(
         recitations.append(Recitation(**rec))
         idx_to_recitation[rec['id']] = Recitation(**rec)
 
-    # extract speech intervals
-    # every key is "recitation_{idx}"
-    # for rec_id in dataset_dict:
-    #     id = int(rec_id.split('_')[-1])
-    #     ds = dataset_dict[rec_id]
-    #
-    #     dataset_dict[rec_id] = extarct_speech_intervals(
-    #         ds, idx_to_recitation[id],
-    #         device=device,
-    #         batch_size=batch_size,
-    #         model=vad_model,
-    #     )
+    # the map loops over splits separtely
     dataset_dict = dataset_dict.map(
         intervals_map,
         batched=True,
@@ -337,6 +301,7 @@ def extract_speech_interval_from_ds(
         fn_kwargs={'model': vad_model, 'device': device,
                    'idx_to_recitation': idx_to_recitation},
     )
+    dataset_dict = dataset_dict.cast(DS_FEATURES_PROCESSED)
 
     return dataset_dict
 
