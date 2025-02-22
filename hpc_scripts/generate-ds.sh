@@ -1,12 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=GenerateDS
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:2
-#SBATCH --nodes=1
+
+#SBATCH --job-name=GenerateSegmentDS
+#SBATCH --account=shams035
 #SBATCH --output=generate-ds.out
-#SBATCH --ntasks=16
-#SBATCH --account=g.shams035u1
 #SBATCH --time=1-01:00:00
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+
+
 
 
 echo 'Starting Generate dataset task #########'
