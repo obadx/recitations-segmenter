@@ -25,6 +25,7 @@ DS_FEATURES = Features({
     'recitation_id': Value(dtype='int32'),
     'url': Value(dtype='string'),
     'audio': Audio(),
+    'duration': Value(dtype='float32'),
     'speech_intervals': Array2D(shape=(None, 2), dtype="float32"),
     'is_interval_complete': Value(dtype='bool'),
 })
@@ -35,6 +36,7 @@ DS_FEATURES_PROCESSED = Features({
     'recitation_id': Value(dtype='int32'),
     'url': Value(dtype='string'),
     'audio': Audio(sampling_rate=16000),
+    'duration': Value(dtype='float32'),
     'speech_intervals': Array2D(shape=(None, 2), dtype="float32"),
     'is_interval_complete': Value(dtype='bool'),
 })
@@ -124,6 +126,7 @@ def mono_decoder(batch):
 
 def librosa_mono_decoder(batch):
     audio_data = []
+    durations: list[float] = []
     for audio in batch["audio"]:
         audio_path = audio['path']
         try:
@@ -139,11 +142,12 @@ def librosa_mono_decoder(batch):
                 "sampling_rate": sample_rate,
                 "path": audio_path,
             })
+            durations.append(len(waveform) / sample_rate)
         except Exception as e:
             print(f"⚠️ Failed {audio_path}: {str(e)}")
             raise e
 
-    return {"audio": audio_data}
+    return {"audio": audio_data, "duration": durations}
 
 
 def generate_ds(recitation: Recitation, ds_path: Path) -> Dataset:
