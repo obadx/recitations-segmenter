@@ -4,87 +4,110 @@ recitations:
     url: https://everyayah.com/data/Husary_128kbps/000_versebyverse.zip
     window_size_samples: 1536
     threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 300
-    pad_duration_ms: 30
+    min_silence_duration_ms: 500
+    min_speech_duration_ms: 1000
+    pad_duration_ms: 40
 
   - reciter_name: محمد صديق المنشاوي
     id: 1
     url: https://everyayah.com/data/Minshawy_Murattal_128kbps/000_versebyverse.zip
     window_size_samples: 1536
     threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
-    pad_duration_ms: 30
+    min_silence_duration_ms: 400
+    min_speech_duration_ms: 1000
+    pad_duration_ms: 20
+
+  - reciter_name: عبد الباسط عبد الصمد
+    id: 2
+    url: https://everyayah.com/data/Abdul_Basit_Murattal_192kbps/000_versebyverse.zip
+    window_size_samples: 1536
+    threshold: 0.3
+    min_silence_duration_ms: 400
+    min_speech_duration_ms: 1000
+    pad_duration_ms: 20
+
 
   - reciter_name: محمود علي البنا
     id: 3
     url: https://everyayah.com/data/mahmoud_ali_al_banna_32kbps/000_versebyverse.zip
     window_size_samples: 1536
     threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
-    pad_duration_ms: 30
+    min_silence_duration_ms: 400
+    min_speech_duration_ms: 10000
+    pad_duration_ms: 20
 
-  - reciter_name: مصطفي إسماعيل
-    id: 4
-    url: https://everyayah.com/data/Mustafa_Ismail_48kbps/000_versebyverse.zip
-    window_size_samples: 1536
-    threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
-    pad_duration_ms: 30
+  # To be deleted wored not good with silero vad
+  # - reciter_name: مصطفي إسماعيل
+  #   id: 4
+  #   url: https://everyayah.com/data/Mustafa_Ismail_48kbps/000_versebyverse.zip
+  #   window_size_samples: 1536
+  #   threshold: 0.3
+  #   min_silence_duration_ms: 300
+  #   min_speech_duration_ms: 700
+  #   pad_duration_ms: 30
 
   - reciter_name: على الحذيفي
     id: 5
     url: https://everyayah.com/data/Hudhaify_128kbps/000_versebyverse.zip
     window_size_samples: 1536
     threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
-    pad_duration_ms: 30
+    min_silence_duration_ms: 350
+    min_speech_duration_ms: 1000
+    pad_duration_ms: 5
 
   - reciter_name: أيمن رشدي سويد
     id: 6
     url: https://everyayah.com/data/Ayman_Sowaid_64kbps/000_versebyverse.zip
     window_size_samples: 1536
     threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
-    pad_duration_ms: 30
+    min_silence_duration_ms: 500
+    min_speech_duration_ms: 1000
+    pad_duration_ms: 10
 
   - reciter_name: محمد أيوب
     id: 7
     url: https://everyayah.com/data/Muhammad_Ayyoub_128kbps/000_versebyverse.zip
     window_size_samples: 1536
     threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
-    pad_duration_ms: 30
+    min_silence_duration_ms: 400
+    min_speech_duration_ms: 1000
+    pad_duration_ms: 10
 
-  - reciter_name: محمد الطبلاوي
+
+  - reciter_name: إبراهيم الأخضر
     id: 8
-    url: https://everyayah.com/data/khalefa_al_tunaiji_64kbps/000_versebyverse.zip
+    url: https://everyayah.com/data/Ibrahim_Akhdar_32kbps/000_versebyverse.zip
     window_size_samples: 1536
     threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
+    min_silence_duration_ms: 390
+    min_speech_duration_ms: 1000
     pad_duration_ms: 30
 
-  - reciter_name: سعد الغامدي
-    id: 9
-    url: https://everyayah.com/data/Ghamadi_40kbps/000_versebyverse.zip
-    window_size_samples: 1536
-    threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
-    pad_duration_ms: 30
+  # - reciter_name: محمد الطبلاوي
+  #   id: 8
+  #   url: https://everyayah.com/data/Mohammad_al_Tablaway_128kbps/000_versebyverse.zip
+  #   window_size_samples: 1536
+  #   threshold: 0.3
+  #   min_silence_duration_ms: 300
+  #   min_speech_duration_ms: 700
+  #   pad_duration_ms: 30
 
-  - reciter_name: عبد الله بصفر
-    id: 10
-    url: https://everyayah.com/data/Abdullah_Basfar_192kbps/000_versebyverse.zip
-    window_size_samples: 1536
-    threshold: 0.3
-    min_silence_duration_ms: 300
-    min_speech_duration_ms: 700
-    pad_duration_ms: 30
+  # recitation is fast for silero vad to capture
+  # - reciter_name: سعد الغامدي
+  #   id: 9
+  #   url: https://everyayah.com/data/Ghamadi_40kbps/000_versebyverse.zip
+  #   window_size_samples: 1536
+  #   threshold: 0.3
+  #   min_silence_duration_ms: 150
+  #   min_speech_duration_ms: 700
+  #   pad_duration_ms: 30
+
+  # recitation is really good but the vad considerd ون as silence
+  # - reciter_name: عبد الله بصفر
+  #   id: 10
+  #   url: https://everyayah.com/data/Abdullah_Basfar_192kbps/000_versebyverse.zip
+  #   window_size_samples: 1536
+  #   threshold: 0.3
+  #   min_silence_duration_ms: 300
+  #   min_speech_duration_ms: 700
+  #   pad_duration_ms: 30
