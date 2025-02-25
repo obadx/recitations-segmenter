@@ -17,6 +17,7 @@ import yaml
 from pypdl import Pypdl
 import filetype
 from mutagen import File
+from tqdm import tqdm
 
 DATA_PATH = Path(__file__).parent / 'data'
 
@@ -451,3 +452,31 @@ def download_file_fast(
             zipfile_path.unlink()
 
     return out_path
+
+
+def downlaod_recitation_iterative(
+    out_path: str | Path,
+    base_url='https://everyayah.com/data/Ayman_Sowaid_64kbps'
+) -> list[str]:
+    """Dowload files iterativly form everyayah.com
+
+    Returns: list of failed files
+    """
+    out_path = Path(out_path)
+    to_download_files = ['bismillah.mp3', 'audhubillah.mp3']
+    for sura_idx in range(1, 115):
+        # from 0 to aya_len
+        for aya_idx in range(SURA_TO_AYA_COUNT[sura_idx] + 1):
+            to_download_files.append(f'{sura_idx:0{3}}{aya_idx:0{3}}.mp3')
+
+    failed_files = []
+    for file in tqdm(to_download_files):
+        try:
+            url = f'{base_url}/{file}'
+            download_file_fast(
+                url, out_path, num_download_segments=2, extract_zip=False, show_progress=False)
+        except Exception as e:
+            print(e)
+            failed_files.append(file)
+
+    return failed_files

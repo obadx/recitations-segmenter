@@ -1,4 +1,5 @@
 from pathlib import Path
+import warnings
 
 import yaml
 from datasets import Dataset, DatasetDict, load_dataset, Audio, Array2D, IterableDatasetDict, Features, Value, IterableDataset
@@ -16,6 +17,8 @@ from ..utils import (
     save_jsonl,
     SURA_TO_AYA_COUNT,
     overwrite_readme_yaml,
+    downlaod_recitation_iterative,
+    deduce_filename,
 )
 from .vad_utils import quran_split_by_silence_batch, load_vad_model
 
@@ -81,7 +84,15 @@ def download_recitations(recitation: Recitation, base_dir) -> Path:
     os.makedirs(p, exist_ok=True)
 
     # download the zip file form url
-    out_path = download_file_fast(recitation.url, p, extract_zip=True)
+    try:
+        out_path = download_file_fast(recitation.url, p, extract_zip=True)
+    except Exception as e:
+        warnings.warn(
+            f'An Error happened while processing trying to download each file independently. Error: {e} ')
+        zip_name = recitation.url.split('/')[-1]
+        base_url = '/'.join(recitation.url.split('/')[:-1])
+        downlaod_recitation_iterative(p / zip_name, base_url=base_url)
+
     return p
 
 # 2. Custom decoder with mono conversion
