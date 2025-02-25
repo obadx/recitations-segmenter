@@ -37,7 +37,7 @@ classifiers = [
 # Optional dependencies
 [project.optional-dependencies]
 train = [
-  "datasets",
+  "datasets==3.2.2",
   "huggingface_hub",
 ]
 

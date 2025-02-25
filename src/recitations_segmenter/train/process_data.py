@@ -152,6 +152,7 @@ def librosa_mono_decoder(batch):
                 "array": waveform,
                 "sampling_rate": sample_rate,
                 "path": audio_path,
+                "bytes": None,  # solving bug for new dataset version 3.2.2
             })
             durations.append(len(waveform) / sample_rate)
         except Exception as e:
