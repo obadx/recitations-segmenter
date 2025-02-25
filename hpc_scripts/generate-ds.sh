@@ -6,12 +6,13 @@
 #SBATCH --output=generate-ds.out
 #SBATCH --time=1-01:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=24
+#SBATCH --cpus-per-task=16
 
 
 
 
 echo 'Starting Generate dataset task #########'
+bash /cluster/users/shams035u1/.bashrc
 source /cluster/users/shams035u1/data/miniconda3/bin/activate
 conda activate segment
 cd ..
