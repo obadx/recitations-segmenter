@@ -142,7 +142,7 @@ def librosa_mono_decoder(batch, sample_rate=16000):
         audio_path = audio['path']
         try:
             # Load as mono with original sample rate
-            waveform, sample_rate = librosa.core.load(
+            waveform, _ = librosa.core.load(
                 audio_path,
                 sr=sample_rate,
                 mono=True  # Force mono conversion
