@@ -23,7 +23,7 @@ dependencies = [
   "numpy",
   "torchaudio",
   "pyyaml",
-  "librosa",
+  "librosa==0.10.0",
   "standard-aifc",
   "standard-sunau",
 ]
