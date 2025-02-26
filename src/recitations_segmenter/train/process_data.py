@@ -27,7 +27,7 @@ DS_FEATURES = Features({
     'reciter_name': Value(dtype='string'),
     'recitation_id': Value(dtype='int32'),
     'url': Value(dtype='string'),
-    'audio': Audio(),
+    'audio': Audio(decode=False),
     'duration': Value(dtype='float32'),
     'speech_intervals': Array2D(shape=(None, 2), dtype="float32"),
     'is_interval_complete': Value(dtype='bool'),
@@ -135,7 +135,7 @@ def mono_decoder(batch):
     return {"audio": audio_data}
 
 
-def librosa_mono_decoder(batch):
+def librosa_mono_decoder(batch, sample_rate=16000):
     audio_data = []
     durations: list[float] = []
     for audio in batch["audio"]:
@@ -144,7 +144,7 @@ def librosa_mono_decoder(batch):
             # Load as mono with original sample rate
             waveform, sample_rate = librosa.core.load(
                 audio_path,
-                sr=None,  # Keep native rate
+                sr=sample_rate,
                 mono=True  # Force mono conversion
             )
 
@@ -197,16 +197,15 @@ def generate_ds(recitation: Recitation, ds_path: Path) -> Dataset:
     )
 
     # custom loading method for audio files
-    ds = ds.cast_column("audio", Audio(decode=False))  # Keep raw paths
+    # ds = ds.cast_column("audio", Audio(decode=False))  # Keep raw paths
     ds = ds.map(
         librosa_mono_decoder,
         # mono_decoder,
         batched=True,
         batch_size=10,
         features=DS_FEATURES,
+        fn_kwargs={'sample_rate': 16000}
     )
-    # resample to 16000
-    ds = ds.cast_column("audio", Audio(sampling_rate=16000))
 
     return ds
 
