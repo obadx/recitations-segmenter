@@ -23,7 +23,7 @@ recitations:
     window_size_samples: 1536
     threshold: 0.3
     min_silence_duration_ms: 400
-    min_speech_duration_ms: 1000
+    min_speech_duration_ms: 700
     pad_duration_ms: 20
 
 
@@ -52,7 +52,7 @@ recitations:
     window_size_samples: 1536
     threshold: 0.3
     min_silence_duration_ms: 350
-    min_speech_duration_ms: 1000
+    min_speech_duration_ms: 700
     pad_duration_ms: 5
 
   - reciter_name: أيمن رشدي سويد
@@ -80,7 +80,7 @@ recitations:
     window_size_samples: 1536
     threshold: 0.3
     min_silence_duration_ms: 390
-    min_speech_duration_ms: 1000
+    min_speech_duration_ms: 700
     pad_duration_ms: 30
 
   # - reciter_name: محمد الطبلاوي
