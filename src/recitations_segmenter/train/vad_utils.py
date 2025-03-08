@@ -56,6 +56,14 @@ def load_vad_model():
     return init_jit_model(SILERO_VAD_PATH)
 
 
+class NoSpeechIntervals(Exception):
+    pass
+
+
+class TooHighMinSpeechDuration(Exception):
+    pass
+
+
 @dataclass
 class SegmentationOutput:
     """
@@ -171,6 +179,10 @@ def quran_split_by_silence(
                        prepend=torch.tensor([False], device=device))
     intervals = torch.arange(probs.shape[0], device=device)[diffs]
 
+    if intervals.shape[0] == 0:
+        raise NoSpeechIntervals(
+            'No speech intervals found. May be `threshold` is too high or the input `wav` is complete silence')
+
     # no silence at the end of the track
     if intervals.shape[0] % 2 != 0:
         intervals = torch.cat(
@@ -190,6 +202,10 @@ def quran_split_by_silence(
         min_speech_duration_ms * sample_rate / 1000)
     clean_intervals = remove_small_speech_intervals(
         clean_intervals, min_speech_duration_samples)
+
+    if clean_intervals.shape[0] == 0:
+        raise TooHighMinSpeechDuration(
+            'No speech intervals found Please Lower the `min_speech_duration_ms`')
 
     # add padding
     padding_samples = int(pad_duration_ms * sample_rate / 1000)
@@ -301,6 +317,10 @@ def quran_split_by_silence_batch(
             prepend=torch.tensor([False], device=device))
         intervals = torch.arange(num_frames, device=device)[diffs]
 
+        if intervals.shape[0] == 0:
+            raise NoSpeechIntervals(
+                'No speech intervals found. May be `threshold` is too high or the input `wav` is complete silence')
+
         # no silence at the end of the track
         if intervals.shape[0] % 2 != 0:
             intervals = torch.cat(
@@ -320,6 +340,10 @@ def quran_split_by_silence_batch(
             min_speech_duration_ms * sample_rate / 1000)
         clean_intervals = remove_small_speech_intervals(
             clean_intervals, min_speech_duration_samples)
+
+        if clean_intervals.shape[0] == 0:
+            raise TooHighMinSpeechDuration(
+                'No speech intervals found Please Lower the `min_speech_duration_ms`')
 
         # add padding
         padding_samples = int(pad_duration_ms * sample_rate / 1000)
