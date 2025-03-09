@@ -10,6 +10,7 @@ import torchaudio
 import librosa
 import gc
 from tqdm import tqdm
+import numpy as np
 
 from ..utils import (
     download_file_fast,
@@ -20,7 +21,7 @@ from ..utils import (
     downlaod_recitation_iterative,
     deduce_filename,
 )
-from .vad_utils import quran_split_by_silence_batch, load_vad_model
+from .vad_utils import quran_split_by_silence_batch, load_vad_model, quran_split_by_silence
 
 DS_FEATURES = Features({
     'aya_name': Value(dtype='string'),
@@ -250,6 +251,35 @@ def intervals_map(batch, idx_to_recitation: dict[int, Recitation], device='cpu',
     }
 
 
+def intervals_map_normal(ex, idx_to_recitation: dict[int, Recitation], device='cpu'):
+    wav = torch.tensor(ex['audio']['array'], dtype=torch.float32)
+
+    model = load_vad_model()
+
+    # make sure that the batch is the same recitation
+    recitation = idx_to_recitation[ex['recitation_id']]
+    out = quran_split_by_silence(
+        wav,
+        model=model,
+        window_size_samples=recitation.window_size_samples,
+        min_silence_duration_ms=recitation.min_silence_duration_ms,
+        min_speech_duration_ms=recitation.min_speech_duration_ms,
+        pad_duration_ms=recitation.pad_duration_ms,
+        threshold=recitation.threshold,
+        sample_rate=16000,
+        device=device,
+    )
+    is_complete = out.clean_intervals.view(-1,)[-1] != float('inf')
+
+    del model
+    gc.collect()
+
+    return {
+        'speech_intervals': out.clean_intervals.numpy(),
+        'is_interval_complete': is_complete,
+    }
+
+
 def to_huggingface_16k_dataset(
     recitations_file: str | Path,
     base_dir='data',
@@ -287,6 +317,36 @@ def to_huggingface_16k_dataset(
     dataset_dict = IterableDatasetDict()
     for rec in recitations:
         dataset_dict[f'recitation_{rec.id}'] = rec.dataset
+
+    return dataset_dict
+
+
+def extract_speech_interval_from_ds_normal(
+    dataset_dict: DatasetDict,
+    recitations_file: str | Path,
+    device='cpu',
+    num_proc=16,
+) -> DatasetDict:
+    assert isinstance(dataset_dict, DatasetDict)
+    assert device == 'cpu', 'We only support CPU for parallel processing'
+
+    recitations = []
+    idx_to_recitation = {}
+    with open(recitations_file, 'r', encoding='utf-8') as file:
+        data = yaml.safe_load(file)['recitations']
+    for rec in data:
+        recitations.append(Recitation(**rec))
+        idx_to_recitation[rec['id']] = Recitation(**rec)
+
+    # the map loops over splits separtely
+    dataset_dict = dataset_dict.map(
+        intervals_map_normal,
+        batched=False,
+        num_proc=num_proc,
+        fn_kwargs={'device': device,
+                   'idx_to_recitation': idx_to_recitation},
+    )
+    dataset_dict = dataset_dict.cast(DS_FEATURES_PROCESSED)
 
     return dataset_dict
 
@@ -370,6 +430,69 @@ def save_to_disk(
             gc.collect()
             cache = []
             shard_idx += 1
+
+    # create metadata yaml on top of the readme
+    metadata = {
+        'configs': [{
+            'config_name': 'default',
+            'data_files': metadata_items,
+        }]
+    }
+    overwrite_readme_yaml(out_path / 'README.md', metadata)
+
+
+def save_normal_map(
+    batch, ids,
+    out_path='',
+    samples_per_shard=1024,
+    split_name=''
+):
+    print(f'len of batch: {len(ids)}')
+    shard_idx = int((np.ceil((ids[-1] + 1) / samples_per_shard))) - 1
+    print(f'Shard: {shard_idx}')
+    shard_ds = Dataset.from_dict(batch)
+    shard_ds.to_parquet(
+        out_path / f'data/{split_name}/train/shard_{shard_idx:0{5}}.parquet')
+    del shard_ds
+    gc.collect()
+
+
+def save_to_disk_normal(
+    dataset: DatasetDict,
+    out_path: str | Path,
+    samples_per_shard: int = 128,
+):
+    """save an Iterable hugginfce dataset dict onto disk
+    """
+    assert isinstance(dataset, DatasetDict), (
+        f'We only support DatsetDict we got {type(dataset)}')
+
+    out_path = Path(out_path)
+
+    # create directory structure
+    os.makedirs(out_path, exist_ok=True)
+
+    # loop to save as parquet format
+    metadata_items = []
+    for split in dataset:
+        dataset.map(
+            save_normal_map,
+            batched=True,
+            batch_size=samples_per_shard,
+            with_indices=True,
+            fn_kwargs={
+                'out_path': out_path,
+                'samples_per_shard': samples_per_shard,
+                'split_name': split,
+            }
+        )
+
+    for split in dataset:
+        metadata_items.append(
+            {'split': split,
+             'path': f'data/{split}/train/*.parquet'
+             }
+        )
 
     # create metadata yaml on top of the readme
     metadata = {
