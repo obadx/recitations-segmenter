@@ -410,7 +410,7 @@ def save_to_disk(
         for idx, item in tqdm(enumerate(dataset[split])):
             cache.append(item)
 
-            if idx % samples_per_shard == 0:
+            if (idx % samples_per_shard == 0) and idx != 0:
                 shard_ds = Dataset.from_list(cache)
                 shard_ds.to_parquet(
                     out_path / f'data/{split}/train/shard_{shard_idx:0{5}}.parquet')
