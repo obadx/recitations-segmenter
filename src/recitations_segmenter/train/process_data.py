@@ -351,6 +351,36 @@ def extract_speech_interval_from_ds_normal(
     return dataset_dict
 
 
+def extract_speech_interval_from_ds_split(
+    dataset: IterableDataset,
+    recitations_file: str | Path,
+    vad_model,
+    device='cuda',
+    batch_size=256,
+) -> IterableDataset:
+    assert isinstance(dataset, IterableDataset)
+
+    recitations = []
+    idx_to_recitation = {}
+    with open(recitations_file, 'r', encoding='utf-8') as file:
+        data = yaml.safe_load(file)['recitations']
+    for rec in data:
+        recitations.append(Recitation(**rec))
+        idx_to_recitation[rec['id']] = Recitation(**rec)
+
+    # the map loops over splits separtely
+    dataset = dataset.map(
+        intervals_map,
+        batched=True,
+        batch_size=batch_size,
+        fn_kwargs={'model': vad_model, 'device': device,
+                   'idx_to_recitation': idx_to_recitation},
+    )
+    dataset = dataset.cast(DS_FEATURES_PROCESSED)
+
+    return dataset
+
+
 def extract_speech_interval_from_ds(
     dataset_dict: IterableDatasetDict,
     recitations_file: str | Path,
@@ -379,6 +409,50 @@ def extract_speech_interval_from_ds(
     dataset_dict = dataset_dict.cast(DS_FEATURES_PROCESSED)
 
     return dataset_dict
+
+
+def save_to_disk_split(
+    dataset: IterableDataset,
+    split_name: str,
+    out_path: str | Path,
+    samples_per_shard: int = 128,
+):
+    """save an Iterable hugginfce dataset onto disk
+    """
+    assert isinstance(dataset, IterableDataset), (
+        f'We only support IterableDatset we got {type(dataset)}')
+
+    out_path = Path(out_path)
+
+    # create directory structure
+    os.makedirs(out_path, exist_ok=True)
+
+    # loop to save as parquet format
+    cache = []
+    shard_idx = 0
+    for idx, item in tqdm(enumerate(dataset)):
+        cache.append(item)
+
+        if (idx % samples_per_shard == 0) and idx != 0:
+            shard_ds = Dataset.from_list(cache)
+            shard_ds.to_parquet(
+                out_path / f'data/{split_name}/train/shard_{shard_idx:0{5}}.parquet')
+            del shard_ds
+            del cache
+            gc.collect()
+            cache = []
+            shard_idx += 1
+
+    # rest of the items
+    if cache:
+        shard_ds = Dataset.from_list(cache)
+        shard_ds.to_parquet(
+            out_path / f'data/{split_name}/train/shard_{shard_idx:0{5}}.parquet')
+        del shard_ds
+        del cache
+        gc.collect()
+        cache = []
+        shard_idx += 1
 
 
 def save_to_disk(

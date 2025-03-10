@@ -2,7 +2,7 @@ import argparse
 
 from datasets import load_dataset
 
-from recitations_segmenter.train.process_data import extract_speech_interval_from_ds, save_to_disk
+from recitations_segmenter.train.process_data import extract_speech_interval_from_ds_split, save_to_disk_split
 from recitations_segmenter.train.vad_utils import load_vad_model
 
 
@@ -13,10 +13,10 @@ def main(args):
 
     # Load and process dataset
     print(f"Loading dataset from {args.dataset_path}...")
-    ds = load_dataset(args.dataset_path, streaming=True)
+    ds = load_dataset(args.dataset_path, split=args.split, streaming=True)
 
     print("Processing speech intervals...")
-    processed_ds = extract_speech_interval_from_ds(
+    processed_ds = extract_speech_interval_from_ds_split(
         ds,
         args.recitations_file,
         vad_model=model,
@@ -27,9 +27,11 @@ def main(args):
 
     # Save results
     print(f"Saving processed dataset to {args.out_path}...")
-    save_to_disk(processed_ds,
-                 out_path=args.out_path,
-                 samples_per_shard=args.samples_per_shard)
+    save_to_disk_split(
+        processed_ds,
+        split_name=args.split,
+        out_path=args.out_path,
+        samples_per_shard=args.samples_per_shard)
     print("Processing complete!")
 
 
@@ -45,6 +47,13 @@ if __name__ == '__main__':
         help='Path to input Hugging Face dataset'
     )
     parser.add_argument(
+        '--split',
+        type=str,
+        required=True,
+        help='The name of the split'
+    )
+
+    parser.add_argument(
         '--recitations-file',
         type=str,
         default='./recitations.yml',
@@ -53,14 +62,14 @@ if __name__ == '__main__':
     parser.add_argument(
         '--device',
         type=str,
-        default='cuda',
+        default='cpu',
         choices=['cuda', 'cpu'],
         help='Device to use for VAD processing'
     )
     parser.add_argument(
         '--batch-size',
         type=int,
-        default=32,
+        default=1,
         help='Batch size for VAD processing'
     )
     parser.add_argument(
