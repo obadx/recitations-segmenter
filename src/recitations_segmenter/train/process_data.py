@@ -368,6 +368,10 @@ def extract_speech_interval_from_ds_split(
         recitations.append(Recitation(**rec))
         idx_to_recitation[rec['id']] = Recitation(**rec)
 
+    # Filter samples with short duration speech duration
+    dataset = dataset.filter(
+        lambda ex: ex['duration'] > idx_to_recitation[ex['recitation_id']].min_speech_duration_ms / 1000)
+
     # the map loops over splits separtely
     dataset = dataset.map(
         intervals_map,
