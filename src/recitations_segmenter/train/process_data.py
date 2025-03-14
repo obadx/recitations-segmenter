@@ -127,7 +127,6 @@ def mono_decoder(batch):
             audio_data.append({
                 "array": mono_waveform.numpy(),
                 "sampling_rate": sample_rate,
-                "path": audio_path,
             })
         except Exception as e:
             print(f"⚠️ Failed {audio_path}: {str(e)}")
