@@ -7,6 +7,7 @@ import yaml
 import submitit
 
 from recitations_segmenter.utils import overwrite_readme_yaml
+from recitations_segmenter.train.process_data import DS_FEATURES_PROCESSED
 
 
 def load_splits(recitations_file_path) -> list[str]:
@@ -41,6 +42,7 @@ def write_redmme(splits: list[str], dataset_path):
              }
         )
     metadata = {
+        'dataset_info': {'featrues': DS_FEATURES_PROCESSED._to_yaml_list},
         'configs': [{
             'config_name': 'default',
             'data_files': metadata_items,
