@@ -5,7 +5,7 @@ from recitations_segmenter.train.vad_utils import read_audio, quran_split_by_sil
 
 if __name__ == '__main__':
     # file_path = '/home/abdullah/Downloads/001.adts'
-    file_path = '/home/abdullah/Downloads/002002.mp3'
+    file_path = '/home/abdullah/Downloads/103001.mp3'
     wav = read_audio(file_path)
 
     # ds = load_dataset('abdullahaml/test')['train']
@@ -13,7 +13,6 @@ if __name__ == '__main__':
     # wav = torch.tensor(wav, dtype=torch.float32)
 
     model = init_jit_model(SILERO_VAD_PATH)
-    print(model)
 
     out = quran_split_by_silence(
         wav,
