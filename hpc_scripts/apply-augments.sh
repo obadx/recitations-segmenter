@@ -7,7 +7,7 @@ cd ..
 
 BASE_PATH=/cluster/users/shams035u1/data/segmentation-datasets
 
-python extract_speech_intervals_jobs.py \
+python apply_augments.py \
     --dataset-path "$BASE_PATH/recitation-segmentation" \
     --out-path "$BASE_PATH/recitation-segmentation-augmented" \
     --batch-size 32 \
