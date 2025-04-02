@@ -19,16 +19,16 @@ dependencies = [
   "quran-transcript @ git+https://github.com/obadx/quran-transcript.git",
   "filetype==1.2.0",
   "mutagen==1.47.0",
-  "torch",
+  "torch==2.6.0",
   "numpy",
   "torchaudio",
   "pyyaml",
-  "librosa==0.10.0",
+  "librosa==0.10.2",
   "standard-aifc",
   "standard-sunau",
   "submitit==1.5.2",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
@@ -40,6 +40,9 @@ classifiers = [
 train = [
   "datasets==3.3.2",
   "huggingface_hub",
+  "audiomentations==0.40.0",
+  "pydub>=0.22.0,<1",
+  "pyroomacoustics>=0.7.4",
 ]
 
 [project.urls]
