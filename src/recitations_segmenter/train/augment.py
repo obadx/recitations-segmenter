@@ -69,13 +69,6 @@ def build_audiomentations_augs(p=0.4, seed=42, all=False):
         return Compose(transforms, p=p)
     return SomeOf((1, 3), transforms=transforms, p=p)
 
-# TODO:
-# * stresh [DONE]
-# * Augment
-# Training:
-# * Truncate
-# * Extract Features
-
 
 class StrechAugment(object):
     def __init__(
