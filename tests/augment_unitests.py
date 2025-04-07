@@ -2,7 +2,11 @@ import unittest
 
 import numpy as np
 
-from recitations_segmenter.train.process_before_train import truncate, TruncateOutput
+from recitations_segmenter.train.process_before_train import (
+    truncate,
+    TruncateOutput,
+    calculate_overlap,
+)
 
 
 def trunc_print(out: TruncateOutput):
@@ -218,5 +222,15 @@ class TestReciterPool(unittest.TestCase):
         np.testing.assert_array_equal(
             out.speech_intervals_samples[1], np.array([[2, 2]]))
 
-        if __name__ == '__main__':
-            unittest.main()
+    def test_calculte_overlap(self):
+        intervals = np.array([
+            [4, 8],
+            [10, 19],
+            [30, 35],
+        ], dtype=np.longlong)
+        overlap = calculate_overlap(intervals, window_sart=0, window_end=5)
+        self.assertEqual(overlap, 1)
+
+
+if __name__ == '__main__':
+    unittest.main()
