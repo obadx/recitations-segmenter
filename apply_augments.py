@@ -48,6 +48,7 @@ def process_ds(
     seed
 ) -> None:
     ds = load_dataset(args.dataset_path, streaming=True, split=split)
+    ds = ds.shuffle(seed=seed)
     out_ds_split = augment_ds_split(
         ds,
         seed=int(seed),
