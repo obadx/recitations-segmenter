@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from recitations_segmenter.train.process_before_train import (
+from recitations_segmenter.train.augment import (
     truncate,
     TruncateOutput,
     calculate_overlap,
@@ -23,6 +23,24 @@ class TestReciterPool(unittest.TestCase):
 
     def tearDown(self):
         ...
+
+    def test_failed_case_turncate(self):
+        wav = np.random.rand(593920)
+        speech_intervals = np.array(
+            [[0.37400001,  5.38600016],
+             [8.72599983, 33.51399994]]
+        )
+        out = truncate(
+            wav=wav,
+            speech_intervals_sec=speech_intervals,
+            sampling_rate=16000,
+            truncate_window_overlap_length=16000,
+            max_size_samples=80000,
+            verbose=True,
+        )
+
+        intervals = np.concatenate(out.speech_intervals_samples, 0)
+        np.testing.assert_equal((intervals >= 0).all(), True)
 
     def test_truncate(self):
         wav = np.arange(10, dtype=np.float32)
@@ -222,13 +240,31 @@ class TestReciterPool(unittest.TestCase):
         np.testing.assert_array_equal(
             out.speech_intervals_samples[1], np.array([[2, 2]]))
 
+    def test_truncate_inteval_end_is_inf(self):
+        wav = np.arange(10, dtype=np.float32)
+        speech_intervals_sec = np.array(
+            [[0.0, 2.0], [4.0, float('inf')]], dtype=np.float32)
+        out = truncate(
+            wav=wav,
+            speech_intervals_sec=speech_intervals_sec,
+            sampling_rate=1,
+            truncate_window_overlap_length=2,
+            max_size_samples=20,
+            verbose=True
+        )
+        self.assertEqual(len(out.audio), 1)
+        np.testing.assert_array_equal(out.audio[0]['array'], wav)
+        intervals = np.concatenate(out.speech_intervals_samples, 0)
+        np.testing.assert_array_equal(
+            intervals, np.array([[0, 2], [4, 9]], dtype=np.longlong))
+
     def test_calculte_overlap(self):
         intervals = np.array([
             [4, 8],
             [10, 19],
             [30, 35],
         ], dtype=np.longlong)
-        overlap = calculate_overlap(intervals, window_sart=0, window_end=5)
+        overlap = calculate_overlap(intervals, window_start=0, window_end=5)
         self.assertEqual(overlap, 1)
 
 

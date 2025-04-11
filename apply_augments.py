@@ -7,7 +7,12 @@ import numpy as np
 import submitit
 
 from recitations_segmenter.train.process_data import save_to_disk_split
-from recitations_segmenter.train.augment import augment_ds_split, DS_FEATURES_AUGMNETED
+from recitations_segmenter.train.augment import (
+    augment_ds_split,
+    DS_FEATURES_TRAIN,
+    AugmentConfig,
+    extract_features_for_ds,
+)
 from recitations_segmenter.utils import overwrite_readme_yaml
 
 
@@ -44,36 +49,43 @@ def write_redmme(splits: list[str], dataset_path, features: Features):
 
 def process_ds(
     args,
+    config: AugmentConfig,
     split,
     seed
 ) -> None:
     ds = load_dataset(args.dataset_path, streaming=True, split=split)
-    ds = ds.shuffle(seed=seed)
-    out_ds_split = augment_ds_split(
+
+    aug_ds_split = augment_ds_split(
         ds,
         seed=int(seed),
-        stretch_ragne=[args.min_stretch_ratio, args.max_stretch_ratio],
-        augment_prob=args.augment_prob,
-        batch_size=args.batch_size,
+        stretch_ragne=[config.min_stretch_ratio, config.max_stretch_ratio],
+        augment_prob=config.augment_prob,
+        batch_size=config.batch_size,
     )
+
+    out_ds_split = extract_features_for_ds(aug_ds_split, config)
+
+    out_ds_split = out_ds_split.shuffle(seed=seed)
+
     save_to_disk_split(
         out_ds_split,
         split_name=split,
         out_path=args.out_path,
-        samples_per_shard=args.samples_per_shard,
+        samples_per_shard=config.samples_per_shard,
     )
 
 
 def main(args):
 
+    config = AugmentConfig.from_yaml('./augment_config.yml')
     ds_dict = load_dataset(args.dataset_path, streaming=True)
 
     # Writing out dataset metadata
     splits = [split for split in ds_dict]
-    write_redmme(splits, args.out_path, features=DS_FEATURES_AUGMNETED)
+    write_redmme(splits, args.out_path, features=DS_FEATURES_TRAIN)
 
     # generating reandom seeeds for every split
-    rng = np.random.default_rng(seed=args.seed)
+    rng = np.random.default_rng(seed=config.seed)
     seeds = rng.integers(low=0, high=512, size=(len(splits),))
 
     # Configure Slurm
@@ -94,15 +106,16 @@ def main(args):
                 # "output": f"QVADcpu_{split}_%j.out"  # %j = Slurm job ID
             }
         )
-        job = executor.submit(
-            process_ds,
-            args=args,
-            split=split,
-            seed=seed,
-        )
+        # job = executor.submit(
+        #     process_ds,
+        #     args=args,
+        #     config=config,
+        #     split=split,
+        #     seed=seed,
+        # )
+        # print(job.job_id)
 
-        print(job.job_id)
-        # process_ds(args, split, int(seed))
+        process_ds(args=args, split=split, config=config, seed=int(seed))
 
 
 if __name__ == '__main__':
@@ -115,42 +128,6 @@ if __name__ == '__main__':
         type=str,
         default='../segment-ds-processed.hf',
         help='Path to input Hugging Face dataset'
-    )
-    parser.add_argument(
-        '--batch-size',
-        type=int,
-        default=32,
-        help='Batch size for VAD processing'
-    )
-    parser.add_argument(
-        '--seed',
-        type=int,
-        default=1,
-        help='Initial seed'
-    )
-    parser.add_argument(
-        '--min-stretch-ratio',
-        type=float,
-        default=0.8,
-        help='The mininum value for stretching the audio array',
-    )
-    parser.add_argument(
-        '--max-stretch-ratio',
-        type=float,
-        default=1.5,
-        help='The maximux value for stretching the audio array',
-    )
-    parser.add_argument(
-        '--augment-prob',
-        type=float,
-        default=0.4,
-        help='The Augmentatinon probability for the dataset (The precentage of augmented samples)',
-    )
-    parser.add_argument(
-        '--samples-per-shard',
-        type=int,
-        default=128,
-        help='Number of samples per output shard'
     )
     parser.add_argument(
         '--out-path',

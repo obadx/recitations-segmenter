@@ -1,0 +1,26 @@
+# Audio processing parameters
+min_size_samples: 32000       # Minimum audio length (2 seconds at 16kHz)
+max_size_samples: 320000      # Maximum audio length (20 seconds at 16kHz)
+truncate_window_overlap_length: 16000  # Overlap when splitting long audio
+
+# Spectrogram feature extraction
+window_length_samples: 400    # Window length for STFT
+hop_length_samples: 160       # Hop length for STFT
+sampling_rate: 16000          # Audio sample rate
+stride: 2                     # Convolution stride for feature extraction
+
+# Label configuration
+speech_label: 1               # Label for speech segments
+silence_label: 0              # Label for silence segments
+ignored_idx: -100             # Index to ignore in loss calculations
+
+# Model and processing
+model_id: facebook/w2v-bert-2.0  # Pre-trained model identifier
+batch-size: 1024              # Batch size for processing
+samples-per-shard: 1024       # Samples per Parquet shard
+
+# Augmentation parameters
+seed: 1                       # Random seed for reproducibility
+min-stretch-ratio: 0.8        # Minimum time stretch ratio
+max-stretch-ratio: 1.5        # Maximum time stretch ratio
+augment-prob: 0.4             # Probability of applying augmentation

@@ -1,9 +1,13 @@
+from typing import Dict
+
 import numpy as np
 import pytest
+from datasets import Dataset
 
-from recitations_segmenter.train.process_before_train import (
+from recitations_segmenter.train.augment import (
     calculate_overlap,
-    annotate
+    annotate,
+    extract_features_and_labels,
 )
 
 
@@ -216,3 +220,95 @@ def test_annotate(
 
     # Verify the output matches expected labels
     np.testing.assert_array_equal(result, expected_np)
+
+
+@pytest.fixture
+def sample_batch() -> Dict[str, list]:
+    return {
+        'audio': [{
+            'array': np.random.rand(480000).astype(np.float32),
+            'sampling_rate': 16000,
+        }],
+        'speech_intervals': [np.array([[0.0, 30.0]], dtype=np.float32)],
+        'aya_name': ['sample_aya'],
+        'reciter_name': ['sample_reciter'],
+        'recitation_id': [1],
+        'url': ['http://example.com'],
+        'duration': [30.0],
+        'speed': [1.0],
+        'is_interval_complete': [True],
+        'is_augmented': [False],
+    }
+
+
+def test_extract_features_and_labels_basic(sample_batch):
+    # Test basic processing with one sample
+    processed_batch = extract_features_and_labels(
+        sample_batch,
+        min_size_samples=32000,
+        max_size_samples=480000,
+        truncate_window_overlap_length=16000,
+    )
+
+    assert 'input_features' in processed_batch
+    assert 'attention_mask' in processed_batch
+    assert 'labels' in processed_batch
+    assert 'aya_id' in processed_batch
+    assert len(processed_batch['audio']) == 1
+    assert len(processed_batch['labels'][0]) == calc_frames(
+        len(sample_batch['audio'][0]['array']))
+    assert len(processed_batch['labels'][0][processed_batch['labels'][0] != -100]) == calc_frames(
+        len(sample_batch['audio'][0]['array']))
+
+
+# def test_truncate_removes_short_samples(sample_batch):
+#     # Add a short sample to the batch
+#     sample_batch['audio'].append({
+#         'array': np.random.rand(16000).astype(np.float32),
+#         'sampling_rate': 16000,
+#     })
+#     sample_batch['speech_intervals'].append(
+#         np.array([[0.0, 1.0]], dtype=np.float32))
+#     # Other fields are extended for consistency
+#
+#     processed_batch = extract_features_and_labels(
+#         sample_batch,
+#         min_size_samples=32000,
+#     )
+#
+#     # The second sample (16000 samples) should be removed
+#     assert len(processed_batch['audio']) == 1
+
+
+# def test_extract_features_for_ds(sample_batch, mock_processor):
+#     # Create a Dataset from the sample batch
+#     ds = Dataset.from_dict(sample_batch)
+#     processed_ds = extract_features_for_ds(
+#         ds,
+#         batch_size=1,
+#         num_proc=1,
+#         model_id='mock/model',
+#     )
+#
+#     assert 'input_features' in processed_ds.features
+#     assert 'attention_mask' in processed_ds.features
+#     assert 'labels' in processed_ds.features
+#     assert len(processed_ds) == 1
+#
+#
+# def test_dataset_dict_processing(sample_batch, mock_processor):
+#     # Create a DatasetDict with train and test splits
+#     train_ds = Dataset.from_dict(sample_batch)
+#     test_ds = Dataset.from_dict(sample_batch)
+#     ds_dict = DatasetDict({'train': train_ds, 'test': test_ds})
+#
+#     processed_ds = extract_features_for_ds(
+#         ds_dict,
+#         batch_size=1,
+#         num_proc=1,
+#     )
+#
+#     assert 'train' in processed_ds
+#     assert 'test' in processed_ds
+#     assert all(
+#         feat in processed_ds['train'].features for feat in DS_FEATURES_TRAIN)
