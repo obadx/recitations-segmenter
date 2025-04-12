@@ -17,35 +17,35 @@ from recitations_segmenter.train.augment import (
         # No overlap: intervals before window
         ([[6, 10]], 0, 5, 0),
         # No overlap: intervals after window
-        ([[1, 5]], 6, 10, 0),
+        ([[1, 6]], 6, 10, 0),
         # Single interval fully inside window
-        ([[3, 7]], 2, 8, 5),
+        ([[3, 8]], 2, 8, 5),
         # Single interval fully covering window
         ([[2, 10]], 5, 8, 3),
         # Partial overlap at the start of the window
-        ([[1, 4]], 3, 6, 2),
+        ([[1, 5]], 3, 6, 2),
         # Partial overlap at the end of the window
-        ([[5, 9]], 3, 7, 2),
+        ([[5, 10]], 3, 7, 2),
         # Interval adjacent to window start (no overlap)
-        ([[3, 4]], 5, 10, 0),
+        ([[3, 5]], 5, 10, 0),
         # Interval adjacent to window end (no overlap)
-        ([[10, 15]], 5, 10, 0),
+        ([[10, 16]], 5, 10, 0),
         # Multiple intervals with partial and full overlaps
-        ([[1, 3], [4, 6], [7, 9]], 2, 8, 6),
+        ([[1, 4], [4, 7], [7, 10]], 2, 8, 6),
         # Interval ends exactly at window start (no overlap)
-        ([[3, 4]], 5, 8, 0),
+        ([[3, 5]], 5, 8, 0),
         # Interval starts exactly at window end (no overlap)
         ([[8, 10]], 5, 8, 0),
         # Zero-length interval inside window
-        ([[5, 5]], 5, 6, 1),
+        ([[5, 6]], 5, 6, 1),
         # Zero-length interval outside window
-        ([[4, 4]], 5, 6, 0),
+        ([[4, 5]], 5, 6, 0),
         # Multiple intervals with some overlaps
-        ([[2, 3], [5, 7], [9, 10]], 4, 8, 3),
+        ([[2, 4], [5, 8], [9, 11]], 4, 8, 3),
         # Invalid interval (start > end) results in no overlap
-        ([[7, 5]], 4, 8, 0),
+        ([[7, 6]], 4, 8, 0),
         # Zero-length window (no overlap)
-        ([[5, 5]], 5, 5, 0),
+        ([[5, 6]], 5, 5, 0),
     ],
 )
 def test_calculate_overlap(intervals, window_start, window_end, expected):
@@ -64,7 +64,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # Test Case 1: Full overlap → speech
         (
             np.random.rand(16000),
-            [[0, 399]],
+            [[0, 400]],
             np.ones(calc_frames(16000)),
             400,
             160,
@@ -76,7 +76,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # Test Case 1.1: Full overlap → speech partilly maskes
         (
             np.random.rand(16000),
-            [[0, 399]],
+            [[0, 400]],
             [1] * 10 + [0] * (calc_frames(16000) - 10),
             400,
             160,
@@ -89,7 +89,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # Test Case 2: No overlap → silence (exactly 50% overlap)
         (
             np.random.rand(16000),
-            [[0, 279]],
+            [[0, 280]],
             np.ones(calc_frames(16000)),
             400,
             160,
@@ -101,7 +101,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # Test Case 2.2: No overlap → silence (exactly 50% overlap) + all masked
         (
             np.random.rand(16000),
-            [[0, 279]],
+            [[0, 280]],
             np.zeros(calc_frames(16000), dtype=np.longlong),
             400,
             160,
@@ -113,7 +113,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # # Test Case 3: Exactly 50% overlap → silence (the other end)
         (
             np.random.rand(16000),
-            [[200, 479]],
+            [[200, 480]],
             np.ones(calc_frames(16000), dtype=np.longlong),
             400,
             160,
@@ -125,7 +125,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # Test Case 4: Multiple frames with varying overlaps
         (
             np.random.rand(16000),
-            [[0, 399], [600, 820]],
+            [[0, 400], [600, 821]],
             np.ones(calc_frames(16000), dtype=np.longlong),
             400,
             160,
@@ -149,7 +149,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # Test Case 8: Custom labels
         (
             np.random.rand(16000),
-            [[80, 400], [920, 1500]],
+            [[80, 401], [920, 1501]],
             np.ones(calc_frames(16000), dtype=np.longlong),
             400,
             160,
@@ -161,7 +161,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # Test Case 10: Stride 1 and hop length 160 → check window positions
         (
             np.random.rand(16000),
-            [[0, 500]],
+            [[0, 501]],
             np.ones(calc_frames(16000), dtype=np.longlong),
             400,
             160,
@@ -173,7 +173,7 @@ def calc_frames(L, W=400, H=160, S=2):
         # Test Case 11: Overlap from multiple intervals → summed correctly, stride = 1
         (
             np.random.rand(16000),
-            [[0, 199], [300, 499]],
+            [[0, 200], [300, 500]],
             np.ones(calc_frames(16000), dtype=np.longlong),
             400,
             160,
