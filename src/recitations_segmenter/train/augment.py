@@ -329,7 +329,7 @@ def truncate(
 
     # edge case last interval end should be < total waves length &interval end with inf
     if speech_intervals_samples.shape[0] > 0:
-        if speech_intervals_samples[-1][1] > len(wav) or speech_intervals_sec[-1][-1] == float('inf'):
+        if speech_intervals_samples[-1][1] > len(wav) or np.isinf(speech_intervals_sec[-1][1]):
             speech_intervals_samples[-1][1] = len(wav)
 
     out = TruncateOutput([], [], [])
@@ -520,7 +520,9 @@ def extract_features_and_labels(
     model_id='facebook/w2v-bert-2.0',
 ) -> dict[str, list[Any]]:
 
+    # --------------------------------------------
     # truncate samples
+    # --------------------------------------------
     speech_intervals_samples = []
     new_batch = {'audio': [], 'speech_intervals': [], 'aya_id': []}
     for key in batch.keys():
@@ -549,7 +551,9 @@ def extract_features_and_labels(
     for key in new_batch.keys():
         batch[key] = new_batch[key]
 
+    # --------------------------------------------
     # remove short samples < min_size_samples
+    # --------------------------------------------
     to_del_ids = []
     for idx in range(len(batch['audio'])):
         if len(batch['audio'][idx]['array']) < min_size_samples:
@@ -562,7 +566,9 @@ def extract_features_and_labels(
 
     assert len(speech_intervals_samples) == len(batch['audio'])
 
+    # --------------------------------------------
     # extract features
+    # --------------------------------------------
     # taken from https://github.com/huggingface/transformers/blob/main/src/transformers/audio_utils.py#L589
     # the total number of max frames will be max_frames / stride
     max_frames = int(
@@ -581,7 +587,9 @@ def extract_features_and_labels(
     batch['input_features'] = model_inputs['input_features']
     batch['attention_mask'] = model_inputs['attention_mask']
 
+    # --------------------------------------------
     # get labels
+    # --------------------------------------------
     batch['labels'] = []
     for idx in range(len(batch['audio'])):
         labels = annotate(
