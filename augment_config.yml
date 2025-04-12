@@ -16,7 +16,7 @@ ignored_idx: -100             # Index to ignore in loss calculations
 
 # Model and processing
 model_id: facebook/w2v-bert-2.0  # Pre-trained model identifier
-batch-size: 1024              # Batch size for processing
+batch-size: 32                # Batch size for processing
 samples-per-shard: 1024       # Samples per Parquet shard
 
 # Augmentation parameters

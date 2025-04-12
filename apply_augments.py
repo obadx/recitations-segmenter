@@ -106,16 +106,16 @@ def main(args):
                 # "output": f"QVADcpu_{split}_%j.out"  # %j = Slurm job ID
             }
         )
-        # job = executor.submit(
-        #     process_ds,
-        #     args=args,
-        #     config=config,
-        #     split=split,
-        #     seed=seed,
-        # )
-        # print(job.job_id)
+        job = executor.submit(
+            process_ds,
+            args=args,
+            config=config,
+            split=split,
+            seed=seed,
+        )
+        print(job.job_id)
 
-        process_ds(args=args, split=split, config=config, seed=int(seed))
+        # process_ds(args=args, split=split, config=config, seed=int(seed))
 
 
 if __name__ == '__main__':
