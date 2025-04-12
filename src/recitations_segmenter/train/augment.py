@@ -5,7 +5,6 @@ from dataclasses import dataclass
 import random
 
 from transformers import AutoFeatureExtractor, Wav2Vec2BertProcessor
-from datasets import Features, Audio, Array2D, Value, Dataset, DatasetDict
 
 from audiomentations import TimeStretch
 import numpy as np
@@ -320,7 +319,8 @@ def truncate(
 ) -> TruncateOutput:
     """Moving winodw truncatation arlogrith where the window size is `max_size_samples`
     Note:
-    * speech_inatevals are inclusive EX intv = [1, 5] sor [1, 2, 3, 4, ,5] are speech
+    * speech_inatevals are execlusive EX intv = [1, 6] so [1, 2, 3, 4, ,5] are speech
+    * speech_intervals are not overlapped
     """
 
     assert max_size_samples > truncate_window_overlap_length, '`max_size_samples` should be > `truncate_window_overlap_length` '
@@ -329,16 +329,20 @@ def truncate(
 
     # edge case last interval end should be < total waves length &interval end with inf
     if speech_intervals_samples.shape[0] > 0:
-        if speech_intervals_samples[-1][1] >= len(wav) or speech_intervals_sec[-1][-1] == float('inf'):
-            speech_intervals_samples[-1][1] = len(wav) - 1
+        if speech_intervals_samples[-1][1] > len(wav) or speech_intervals_sec[-1][-1] == float('inf'):
+            speech_intervals_samples[-1][1] = len(wav)
 
     out = TruncateOutput([], [], [])
     overlap = truncate_window_overlap_length
     window = max_size_samples
     step = window - overlap
-    num_items = int(np.ceil((len(wav) - window) / (window - overlap))) + 1
+    num_items = int(
+        np.ceil(max(0, len(wav) - window) / (window - overlap))) + 1
     if len(wav) == 0:
         num_items = 0
+
+    if verbose:
+        print(f'num of items: {num_items}')
 
     # if verbose:
     #     print(f'before intervals:\n{speech_intervals_samples}')
@@ -359,12 +363,13 @@ def truncate(
         intv_idx = 0
         for intv_idx in range(intv_start_idx, len(speech_intervals_samples)):
             # print(f' speech_intervals:\n {speech_intervals_samples}')
-            # start > interval end
-            if start > speech_intervals_samples[intv_idx][1]:
+            # start >= interval end (because of speech iterval end are execlusive)
+            if start >= speech_intervals_samples[intv_idx][1]:
                 break
 
             # interval end is smaller than the winodw size
-            elif speech_intervals_samples[intv_idx][1] < end - overlap:
+            # ( <=because of speech iterval end are execlusive)
+            elif speech_intervals_samples[intv_idx][1] <= end - overlap:
                 chosen_idx += 1
 
             # deviding the speech interval in two parts
@@ -372,9 +377,10 @@ def truncate(
             # and the other one for the next frame
             elif speech_intervals_samples[intv_idx][0] < end:
                 frgmented_intv = np.zeros(2, dtype=np.longlong)
+                # in case of overlapping winodws
                 frgmented_intv[0] = speech_intervals_samples[intv_idx][0]
                 frgmented_intv[1] = min(
-                    end - 1, int(speech_intervals_samples[intv_idx][1]))
+                    end, int(speech_intervals_samples[intv_idx][1]))
 
                 # new start for the next iteration
                 # if start of speech interval between end and (end -overlap)
@@ -392,7 +398,7 @@ def truncate(
         else:
             out.speech_intervals_samples.append(
                 np.concatenate(
-                    (speech_intervals_samples[intv_start_idx: chosen_idx], np.expand_dims(frgmented_intv, 0)), axis=0),
+                    (speech_intervals_samples[intv_start_idx: chosen_idx].copy(), np.expand_dims(frgmented_intv, 0)), axis=0),
             )
 
         # print('before')
@@ -431,7 +437,7 @@ def calculate_overlap(
     Args:
         intervals (np.ndarray): intervals are 2D array with eatch row represnts 
             (intervals_start, intervals_end).
-            Note: the interval_end are inclusive unlike python indexing
+            Note: the interval_end are exlusive exacly like python indexing
 
     Returns:
         the overlap between the winodw and the intervals:
@@ -445,7 +451,7 @@ def calculate_overlap(
 
     end = np.empty_like(intervals)
     end[:, 0] = window_end
-    end[:, 1] = intervals[:, 1] + 1
+    end[:, 1] = intervals[:, 1]
     end = end.min(axis=1)
 
     overlap = end - start
@@ -471,7 +477,7 @@ def annotate(
     Args:
         speech_intervals_samples (np.narray): 2D array and earch row indicates the
             start and the end indices of speech intervals:
-            NOTE: both start and end are inclusive unlike python indexing
+            NOTE: both start and end are execlusive exaclly python indexing
         attention_mask (np.narrayl): a single dimention vector with type np.int64 with 1s ns 0s.
             Note: len(attention_mask) >= floor(floor(len(wav) - window_size_samples) / hop_length_samples) + 1) / stride)
     Returns the labels as 1s and 0s and ignored index for masked inputs (i.e mask=0) as single dimention np array
@@ -595,7 +601,7 @@ def extract_features_and_labels(
 
 
 def extract_features_for_ds(
-    ds: Dataset | DatasetDict,
+    ds: IterableDataset,
     config: AugmentConfig,
 ) -> IterableDataset:
     assert isinstance(ds, IterableDataset), (

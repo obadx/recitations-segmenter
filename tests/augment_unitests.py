@@ -64,10 +64,9 @@ class TestReciterPool(unittest.TestCase):
         expected_intervals = np.array(
             [
                 [0, 2],
-                [1, 2],
-                [0, 0],
-                [2, 2],
-                [0, 0],
+                [1, 3],
+                [2, 3],
+                [0, 1],
             ]
         )
         self.assertEqual((wav == out_waves).all(), True)
@@ -98,12 +97,10 @@ class TestReciterPool(unittest.TestCase):
         expected_intervals = np.array(
             [
                 [0, 2],
-                [0, 0],
-                [2, 2],
+                [2, 3],
                 [0, 2],
-                [0, 0],
-                [2, 2],
-                [0, 1],
+                [2, 3],
+                [0, 2],
             ]
         )
         self.assertEqual((exeptected_waves == out_waves).all(), True)
@@ -138,14 +135,12 @@ class TestReciterPool(unittest.TestCase):
             [
                 [0, 2],
                 [0, 1],
-                [0, 0],
-                [2, 2],
-                [1, 2],
+                [2, 3],
+                [1, 3],
                 [0, 2],
                 [0, 1],
-                [0, 0],
-                [2, 2],
-                [1, 2],
+                [2, 3],
+                [1, 3],
             ]
         )
         self.assertEqual((exeptected_waves == out_waves).all(), True)
@@ -178,7 +173,7 @@ class TestReciterPool(unittest.TestCase):
 
     def test_truncate_entire_audio_speech(self):
         wav = np.arange(10, dtype=np.float32)
-        speech_intervals_sec = np.array([[0.0, 9.0]], dtype=np.float32)
+        speech_intervals_sec = np.array([[0.0, 10.0]], dtype=np.float32)
         out = truncate(
             wav=wav,
             speech_intervals_sec=speech_intervals_sec,
@@ -188,11 +183,11 @@ class TestReciterPool(unittest.TestCase):
         )
         self.assertEqual(len(out.audio), 5)
         expected_intervals = [
+            np.array([[0, 3]]),
+            np.array([[0, 3]]),
+            np.array([[0, 3]]),
+            np.array([[0, 3]]),
             np.array([[0, 2]]),
-            np.array([[0, 2]]),
-            np.array([[0, 2]]),
-            np.array([[0, 2]]),
-            np.array([[0, 1]]),
         ]
         for i in range(5):
             np.testing.assert_array_equal(
@@ -201,7 +196,7 @@ class TestReciterPool(unittest.TestCase):
     def test_truncate_small_audio(self):
         wav = np.arange(10, dtype=np.float32)
         speech_intervals_sec = np.array(
-            [[0.0, 2.0], [4.0, 9.0]], dtype=np.float32)
+            [[0.0, 3.0], [4.0, 10.0]], dtype=np.float32)
         out = truncate(
             wav=wav,
             speech_intervals_sec=speech_intervals_sec,
@@ -227,7 +222,7 @@ class TestReciterPool(unittest.TestCase):
 
     def test_speech_interval_after_last_window(self):
         wav = np.arange(5, dtype=np.float32)
-        speech_intervals_sec = np.array([[4.0, 4.0]], dtype=np.float32)
+        speech_intervals_sec = np.array([[4.0, 5.0]], dtype=np.float32)
         out = truncate(
             wav=wav,
             speech_intervals_sec=speech_intervals_sec,
@@ -238,9 +233,27 @@ class TestReciterPool(unittest.TestCase):
         self.assertEqual(len(out.audio), 2)
         self.assertEqual(len(out.speech_intervals_samples[0]), 0)
         np.testing.assert_array_equal(
-            out.speech_intervals_samples[1], np.array([[2, 2]]))
+            out.speech_intervals_samples[1], np.array([[2, 3]]))
 
     def test_truncate_inteval_end_is_inf(self):
+        wav = np.arange(10, dtype=np.float32)
+        speech_intervals_sec = np.array(
+            [[0.0, 2.0], [4.0, float('inf')]], dtype=np.float32)
+        out = truncate(
+            wav=wav,
+            speech_intervals_sec=speech_intervals_sec,
+            sampling_rate=1,
+            truncate_window_overlap_length=2,
+            max_size_samples=20,
+            verbose=False
+        )
+        self.assertEqual(len(out.audio), 1)
+        np.testing.assert_array_equal(out.audio[0]['array'], wav)
+        intervals = np.concatenate(out.speech_intervals_samples, 0)
+        np.testing.assert_array_equal(
+            intervals, np.array([[0, 2], [4, 10]], dtype=np.longlong))
+
+    def test_truncate_len_of_wav_smaller_than_window(self):
         wav = np.arange(10, dtype=np.float32)
         speech_intervals_sec = np.array(
             [[0.0, 2.0], [4.0, float('inf')]], dtype=np.float32)
@@ -256,13 +269,13 @@ class TestReciterPool(unittest.TestCase):
         np.testing.assert_array_equal(out.audio[0]['array'], wav)
         intervals = np.concatenate(out.speech_intervals_samples, 0)
         np.testing.assert_array_equal(
-            intervals, np.array([[0, 2], [4, 9]], dtype=np.longlong))
+            intervals, np.array([[0, 2], [4, 10]], dtype=np.longlong))
 
     def test_calculte_overlap(self):
         intervals = np.array([
-            [4, 8],
-            [10, 19],
-            [30, 35],
+            [4, 9],
+            [10, 20],
+            [30, 36],
         ], dtype=np.longlong)
         overlap = calculate_overlap(intervals, window_start=0, window_end=5)
         self.assertEqual(overlap, 1)
