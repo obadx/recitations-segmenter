@@ -136,7 +136,7 @@ if __name__ == '__main__':
     # Load dataset
     # Update with your dataset path
     dataset = load_dataset(
-        'obadx/recitation-segmentation-augmented', num_proc=26)
+        'obadx/recitation-segmentation-augmented', num_proc=16)
 
     # For testing only
     # dataset['train'] = dataset['train'].take(400)
@@ -168,10 +168,10 @@ if __name__ == '__main__':
         logging_strategy='epoch',
         # save_steps=0.5,
         learning_rate=3e-4,
-        per_device_train_batch_size=256,
-        per_device_eval_batch_size=1024,
+        per_device_train_batch_size=128,
+        per_device_eval_batch_size=512,
         num_train_epochs=2,
-        dataloader_num_workers=26,
+        dataloader_num_workers=16,
         weight_decay=0.001,
         logging_dir='./logs',
         load_best_model_at_end=True,
