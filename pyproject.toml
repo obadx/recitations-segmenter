@@ -40,13 +40,22 @@ classifiers = [
 
 # Optional dependencies
 [project.optional-dependencies]
-train = [
+augment = [
   "datasets==3.3.2",
   "huggingface_hub",
   "audiomentations==0.40.0",
   "pydub>=0.22.0,<1",
   "pyroomacoustics>=0.7.4",
   "pytest==8.3.5",
+]
+
+train = [
+  "datasets==3.3.2",
+  "huggingface_hub",
+  "pytest==8.3.5",
+  "scikit-learn",
+  "accelerate==1.6.0",
+  "tensorboard==2.19.0"
 ]
 
 [project.urls]

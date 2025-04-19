@@ -1,0 +1,10 @@
+torch
+datasets
+huggingface_hub
+scikit-learn
+accelerate
+tensorboard
+wandb
+numpy
+python-dotenv
+
