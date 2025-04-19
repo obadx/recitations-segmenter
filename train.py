@@ -15,7 +15,6 @@ import numpy as np
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from torch.utils.data import default_collate
 import torch
-import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 
 
@@ -136,7 +135,8 @@ if __name__ == '__main__':
 
     # Load dataset
     # Update with your dataset path
-    dataset = load_dataset('obadx/recitation-segmentation-augmented')
+    dataset = load_dataset(
+        'obadx/recitation-segmentation-augmented', num_proc=26)
 
     # For testing only
     # dataset['train'] = dataset['train'].take(400)
@@ -215,6 +215,5 @@ if __name__ == '__main__':
     # [optional] finish the wandb run, necessary in notebooks
     wandb.finish()
 
-    # TODO:
-    # # Push model and tokenizer to Hub
+    # Push model and tokenizer to Hub
     trainer.push_to_hub()
