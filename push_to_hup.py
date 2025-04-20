@@ -1,6 +1,7 @@
 import os
 import argparse
 
+import torch
 from huggingface_hub import login as hf_login
 from dotenv import load_dotenv
 from transformers import AutoModel
@@ -31,5 +32,6 @@ if __name__ == '__main__':
 
     load_secrets()
 
-    model = AutoModel.from_pretrained(args.model_dir)
+    model = AutoModel.from_pretrained(
+        args.model_dir, torch_dtype=torch.bfloat16)
     model.push_to_hub(args.repo_name)
