@@ -183,6 +183,7 @@ if __name__ == '__main__':
         hub_model_id='obadx/recitation-segmenter-v2',  # Update with your model name
         bf16=True,
         warmup_ratio=0.2,
+        resume_from_checkpoint='./results/checkpoint-1097',
         optim='adamw_torch',
         lr_scheduler_type='constant',
         report_to=["tensorboard", "wandb"],
@@ -203,14 +204,15 @@ if __name__ == '__main__':
         data_collator=label_processor,
     )
 
-    # Start training
-    if list(Path('./results').glob('checkpoint-*')):
-        print('Resuming !')
-        trainer.train(resume_from_checkpoint=True)
-    else:
-        trainer.train()
+    # # Start training
+    # if list(Path('./results').glob('checkpoint-*')):
+    #     print('Resuming !')
+    #     trainer.train(resume_from_checkpoint=True)
+    # else:
+    #     trainer.train()
 
     # Final evaluation on test set
+    print('Start Testing')
     test_results = trainer.evaluate(
         dataset['validation'], metric_key_prefix='eval_')
     with open('./results/last_eval_results.json', 'w') as f:
