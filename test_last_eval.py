@@ -220,5 +220,5 @@ if __name__ == '__main__':
     # [optional] finish the wandb run, necessary in notebooks
     wandb.finish()
 
-    # Push model and tokenizer to Hub
-    trainer.push_to_hub()
+    # # Push model and tokenizer to Hub
+    # trainer.push_to_hub()
