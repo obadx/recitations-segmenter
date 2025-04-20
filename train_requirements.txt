@@ -7,4 +7,4 @@ tensorboard
 wandb
 numpy
 python-dotenv
-
+transformers
