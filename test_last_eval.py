@@ -212,15 +212,15 @@ if __name__ == '__main__':
     #     trainer.train()
 
     # Final evaluation on test set
-    print('Start Testing')
-    test_results = trainer.evaluate(
-        dataset['validation'], metric_key_prefix='eval_')
-    with open('./results/last_eval_results.json', 'w') as f:
-        json.dump(test_results, f, indent=4)
-    print("Eval Results:", test_results)
+    # print('Start Testing')
+    # test_results = trainer.evaluate(
+    #     dataset['validation'], metric_key_prefix='eval_')
+    # with open('./results/last_eval_results.json', 'w') as f:
+    #     json.dump(test_results, f, indent=4)
+    # print("Eval Results:", test_results)
+    #
+    # # [optional] finish the wandb run, necessary in notebooks
+    # wandb.finish()
 
-    # [optional] finish the wandb run, necessary in notebooks
-    wandb.finish()
-
-    # # Push model and tokenizer to Hub
-    # trainer.push_to_hub()
+    # Push model and tokenizer to Hub
+    trainer.push_to_hub()
