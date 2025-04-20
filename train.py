@@ -120,12 +120,13 @@ class LabelProcessor:
 
 
 if __name__ == '__main__':
+    every = 0.25
     # loading wandb tokens ans HF login
     load_secrets()
 
     # Initializaze wanddb
     # set the wandb project where this run will be logged
-    os.environ["WANDB_PROJECT"] = "recitation-segmenter-v1"
+    os.environ["WANDB_PROJECT"] = "recitation-segmenter-v2"
 
     # save your trained model checkpoint to wandb
     os.environ["WANDB_LOG_MODEL"] = "false"
@@ -162,25 +163,28 @@ if __name__ == '__main__':
     training_args = TrainingArguments(
         seed=42,
         output_dir='./results',
-        eval_strategy='epoch',
-        # eval_steps=0.5,
-        save_strategy='epoch',
-        logging_strategy='epoch',
-        # save_steps=0.5,
-        learning_rate=3e-4,
-        per_device_train_batch_size=128,
-        per_device_eval_batch_size=512,
-        num_train_epochs=2,
+        eval_strategy='steps',
+        eval_steps=every,
+        save_strategy='steps',
+        save_steps=every,
+        logging_strategy='steps',
+        logging_steps=every,
+        learning_rate=5e-5,
+        per_device_train_batch_size=50,
+        per_device_eval_batch_size=64,
+        num_train_epochs=1,
         dataloader_num_workers=16,
-        weight_decay=0.001,
+        weight_decay=0.01,
         logging_dir='./logs',
         load_best_model_at_end=True,
         metric_for_best_model='f1',
         greater_is_better=True,
         # push_to_hub=True,  # this pushed every checkpoint to the hup we want to push the best model only
-        hub_model_id='obadx/test-model',  # Update with your model name
+        hub_model_id='obadx/recitation-segmenter-v2',  # Update with your model name
         bf16=True,
-        warmup_steps=100,
+        warmup_ratio=0.2,
+        optim='adamw_torch',
+        lr_scheduler_type='constant',
         report_to=["tensorboard", "wandb"],
         gradient_checkpointing=True,  # Optional for memory savings # TODO :set it to False
         save_total_limit=3,
