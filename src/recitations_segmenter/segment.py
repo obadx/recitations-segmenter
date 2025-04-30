@@ -8,7 +8,6 @@ from transformers.models.wav2vec2_bert import Wav2Vec2BertForAudioFrameClassific
 from transformers import Wav2Vec2BertProcessor
 from tqdm import tqdm
 
-from .train.augment import calc_frames
 # TODO:
 # batchify
 # inferece
@@ -30,11 +29,13 @@ class W2vBSegmentationOutput:
         intervlas (torch.FloatTensor): the actual speech intervlas of the model without any cleaning (in seconds)
         pobs: (torch.FloatTensor): the average probabilty for every speech segment for `intervals` without cleaning. Same shape as `intervlas`
         clean_intervlas (torch.FloatTensor): the speech intervlas after merging short silecne intervals (< min_silence_duration_ms) in seconds
+        is_complete (bool): wether the interval ends with silence (complete) or not
     """
 
     clean_intervals: torch.FloatTensor
     intervals: torch.FloatTensor
     probs: torch.FloatTensor
+    is_complete: bool
 
     def clean_gpu(self):
         del self.clean_intervals
@@ -88,26 +89,35 @@ def remove_silence_intervals(
 
 def extract_intervals(
     logits: torch.Tensor,
+    time_stamps: torch.LongTensor,
     min_silence_duration_ms=30,
     min_speech_duration_ms=30,
     pad_duration_ms=30,
     speech_label=1,
     silence_label=0,
     sample_rate=16000,
+    hop=160,
+    stride=2,
     return_probabilities=False,
-
+    return_seconds=False,
 ) -> W2vBSegmentationOutput:
+    min_silence_duration_samples = int(
+        min_silence_duration_ms * sample_rate / 1000)
+
+    min_speech_duration_samples = int(
+        min_speech_duration_ms * sample_rate / 1000)
+
+    is_complete = True
     device = logits.device
     labels = logits.argmax(dim=-1)
-    # TODO: select best probabilities only
-    probs = torch.nn.functional.softmax(logits)
+    probs = torch.nn.functional.softmax(logits)[labels]
     window_size_samples = None
 
     # extracting intervals
     # TODO: totally different algorithm
     diffs = torch.diff(labels == speech_label,
                        prepend=torch.tensor([False], device=device))
-    intervals = torch.arange(probs.shape[0], device=device)[diffs]
+    intervals = time_stamps[diffs]
 
     if intervals.shape[0] == 0:
         raise NoSpeechIntervals(
@@ -115,21 +125,17 @@ def extract_intervals(
 
     # no silence at the end of the track
     if intervals.shape[0] % 2 != 0:
+        is_complete = False
         intervals = torch.cat(
-            [intervals, torch.tensor([float('inf')], device=device)])
+            [intervals, time_stamps[-1:] + hop * stride], device=device)
 
-    # scaling to frames instead of mulitple of window_size_samples
-    intervals = intervals.view(-1, 2) * window_size_samples
+    intervals = intervals.view(-1, 2)
 
     # remove small silence duration
-    min_silence_duration_samples = int(
-        min_silence_duration_ms * sample_rate / 1000)
     clean_intervals = remove_silence_intervals(
         intervals, min_silence_duration_samples)
 
     # remove small speech durations
-    min_speech_duration_samples = int(
-        min_speech_duration_ms * sample_rate / 1000)
     clean_intervals = remove_small_speech_intervals(
         clean_intervals, min_speech_duration_samples)
 
@@ -155,19 +161,20 @@ def extract_intervals(
             p = probs[start: idx].mean().item()
             intervals_probs.append(p)
             start = idx
-        if clean_intervals[-1, -1] != float('inf'):
+        if not is_complete:
             intervals_probs.append(probs[start:].mean().item())
         intervals_probs = torch.tensor(intervals_probs)
 
     # convert it to seconds
-    clean_intervals = clean_intervals / sample_rate
-    intervals = intervals / sample_rate
+    if return_seconds:
+        clean_intervals = clean_intervals / sample_rate
+        intervals = intervals / sample_rate
 
-    # TODO: configre device
     return W2vBSegmentationOutput(
         clean_intervals=clean_intervals,
         intervals=intervals.cpu(),
         probs=intervals_probs.cpu() if return_probabilities else None,
+        is_complete=is_complete,
     )
 
 
@@ -217,9 +224,6 @@ def batchify_input(
 def collect_results(
     wav_infos: list[WavInfo],
     batches_logits: Sequence[torch.FloatTensor],
-    processor_window=400,
-    prcoessor_hop=160,
-    processor_stride=2,
 ):
     out_logits: list[torch.FloatTensor] = []
     for wav_info in wav_infos:
@@ -235,22 +239,59 @@ def collect_results(
             else:
                 selected_logits = batches_logits[wav_info.batch_start + idx][start:]
 
-            logits += [t.squeeze(0) for t in selected_logits.split(1)]
+            logits.append(selected_logits)
             start = 0
 
         # aggrecating results after loop
-        logits = torch.cat(logits, dim=0)
+        batch_size, seq_len, num_classes = logits[0].shape
+        logits = torch.cat([l.view(-1, num_classes) for l in logits], dim=0)
 
-        # removing extra outputs from output due to padding for batching
-        num_frames = calc_frames(
-            wav_info.wav_len,
-            W=processor_window,
-            H=prcoessor_hop,
-            S=processor_stride)
-        logits = logits[: num_frames]
         out_logits.append(logits)
 
     return out_logits
+
+
+def generate_time_stamps(
+    features_len,
+    max_duration_samples=320000,
+    max_featrues_len=998,
+    window=400,
+    hop=160,
+    stride=2,
+) -> torch.LongTensor:
+    """Generate timestampls for the labels as every label represents its timestamps
+
+    Generating timestampls for every label as input is split into multiple batches
+    we have different time stamp for every label
+
+    Ensuring that every segment with duration (max_duration_samples) begins with multiple of
+    `max_duration_sample` thus representing the exact sample timeframe
+
+    Example:
+        time_stamps = generate_time_stamps(
+            2* 2 + 1,
+            max_duration_samples=1000,
+            max_featrues_len=2,
+            window=400,
+            hop=160,
+            stride=2,
+        )
+
+    time_stamps = [0, 320, 1000, 1320, 2000]
+                   ^   ^     ^    ^
+                   ^   ^     ^    ^     last seg    
+                 first seg  second seg
+
+    """
+    time_stamps = torch.arange(
+        features_len, dtype=torch.long) * stride * hop
+
+    for batch_idx in range(1, int(np.ceil(features_len / max_featrues_len))):
+        idx = batch_idx * max_featrues_len
+        time_stamps[idx:] += batch_idx * max_duration_samples - \
+            time_stamps[idx] if idx < len(time_stamps) else 0
+
+    return time_stamps
 
 
 @torch.no_grad()
@@ -323,16 +364,17 @@ def segment_recitations(
 
     # Run infernce on batches
     batches_logits: list[torch.FloatTensor] = []
-    batches_attention_mask: list[torch.LongTensor] = []
     for batch in tqdm(wav_batches):
         model_inputs = processor(
             batch,
             sampling_rate=sample_rate,
             return_tensors="pt",
         )
-        model_inputs = model_inputs.to(dtype).to(device)
+        input_features = model_inputs['input_features'].to(dtype).to(device)
+        attention_mask = model_inputs['attention_mask'].to(dtype).to(device)
         logits = model(
-            **model_inputs
+            input_features=input_features,
+            attention_mask=attention_mask,
         )
         # Going back to cpu
         batches_logits.append(logits.cpu().to(torch.float32))
@@ -346,11 +388,27 @@ def segment_recitations(
         processor_stride=processor_stride
     )
 
+    max_features_len = processor(
+        torch.zeros(max_duration_sampels),
+        sampling_rate=sample_rate,
+        return_tensors="pt",
+    )['attention_mask'].shape[1]
+
     # Extract speech intervals for every input
     outputs = list[W2vBSegmentationOutput] = []
     for logits in collected_logits:
+
+        time_stamps = generate_time_stamps(
+            len(logits),
+            max_duration_samples=max_duration_sampels,
+            max_featrues_len=max_features_len,
+            window=processor_window,
+            hop=processor_hop,
+            stride=processor_stride,
+        )
         out = extract_intervals(
             logits,
+            time_stamps,
             min_silence_duration_ms=min_silence_duration_ms,
             min_speech_duration_ms=min_speech_duration_ms,
             pad_duration_ms=pad_duration_ms,
