@@ -53,14 +53,22 @@ class WavInfo:
 
 
 def remove_small_speech_intervals(
-    intervals: torch.tensor, min_speech_duration_samples,
-) -> torch.tensor:
-    """Remove speech segments (< min_speech_duration_samples)  to speech segments
-    Example: speech
+    speech_intervals: torch.LongTensor,
+    min_speech_duration_samples: int,
+) -> torch.LongTensor:
+    """Removes speech segments shorter than the specified minimum duration.
+
+    Args:
+        speech_intervals: Tensor of shape (N, 2) containing speech intervals.
+            Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
+        min_speech_duration_samples: Minimum allowed duration (in samples) for a speech segment.
+
+    Returns:
+        torch.Tensor: Filtered speech intervals tensor of shape (M, 2), where M <= N.
     """
-    intervals = intervals.view(-1)
-    intrval_diffs = torch.diff(intervals)
-    speech_intervals = intrval_diffs[0: len(intrval_diffs): 2]
+    intervals = speech_intervals.view(-1)
+    interval_diffs = torch.diff(intervals)
+    speech_intervals = interval_diffs[0: len(interval_diffs): 2]
     speech_mask = speech_intervals >= min_speech_duration_samples
     mask = speech_mask.view(-1, 1).repeat(1, 2).reshape(-1)
     intervals = intervals[mask].view(-1, 2)
@@ -71,14 +79,26 @@ def remove_silence_intervals(
     intervals: torch.tensor,
     min_silence_duration_samples,
 ) -> torch.tensor:
-    """Merging slilecne segments (< min_silence_duration_samples)  to speech segments
-    Example: speech
+    """Merges adjacent speech segments if the silence between them is shorter than the specified minimum.
+
+    Args:
+        speech_intervals: Tensor of shape (N, 2) containing speech intervals.
+            Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
+        min_silence_duration_samples: Minimum allowed silence duration (in samples).
+
+    Returns:
+        torch.Tensor: Filtered speech intervals tensor of shape (M, 2), where M <= N.
+
+    Note:
+        - Input intervals are expected to alternate between speech and silence segments.
+        - Only operates on silence segments (odd-indexed intervals when flattened).
+        - Preserves leading/trailing silences by default.
     """
     device = intervals.device
     # remove silence intervals
     intervals = intervals.view(-1)
-    intrval_diffs = torch.diff(intervals)
-    silence_intervals = intrval_diffs[1: len(intrval_diffs): 2]
+    interval_diffs = torch.diff(intervals)
+    silence_intervals = interval_diffs[1: len(interval_diffs): 2]
     silence_mask = silence_intervals >= min_silence_duration_samples
     mask = silence_mask.view(-1, 1).repeat(1, 2).reshape(-1)
     mask = torch.cat([torch.tensor([True], device=device),
@@ -87,6 +107,8 @@ def remove_silence_intervals(
     return intervals
 
 
+# TODO:
+# * add return prbabilities
 def extract_intervals(
     logits: torch.Tensor,
     time_stamps: torch.LongTensor,
@@ -101,6 +123,37 @@ def extract_intervals(
     return_probabilities=False,
     return_seconds=False,
 ) -> W2vBSegmentationOutput:
+    """Extracts and processes speech/silence intervals from model logits.
+
+    Args:
+        logits: Model output tensor of shape (T, num_classes)
+        time_stamps: Tensor of shape (T,) containing frame timestamps in samples
+        min_silence_duration_ms: Minimum silence duration (ms) between speech segments
+        min_speech_duration_ms: Minimum duration (ms) for a valid speech segment
+        pad_duration_ms: Padding duration (ms) to add around speech segments
+        speech_label: Class index representing speech
+        silence_label: Class index representing silence
+        sample_rate: Audio sample rate in Hz
+        hop: Hop length used in feature extraction
+        stride: Stride factor for timestamp calculation
+        return_probabilities: Whether to return class probabilities
+        return_seconds: Whether to return intervals in seconds instead of samples
+
+    Returns:
+        W2vBSegmentationOutput: Named tuple containing:
+            - clean_intervals: Processed speech intervals after filtering/padding
+            - intervals: Raw extracted intervals before filtering
+            - probs: Class probabilities (None if not requested)
+            - is_complete: Whether audio processing completed normally
+
+    Raises:
+        NoSpeechIntervals: If no speech segments are detected
+        TooHighMinSpeechDuration: If filtering removes all speech segments
+
+    Note:
+        - Intervals are clamped to prevent negative starts or exceeding audio length
+        - Final interval end is clamped to (audio_length + hop*stride) if not provided
+    """
     min_silence_duration_samples = int(
         min_silence_duration_ms * sample_rate / 1000)
 
@@ -108,15 +161,14 @@ def extract_intervals(
         min_speech_duration_ms * sample_rate / 1000)
 
     is_complete = True
-    device = logits.device
     labels = logits.argmax(dim=-1)
-    probs = torch.nn.functional.softmax(logits)[labels]
-    window_size_samples = None
+    # TODO: returning probabilities
+    probs = torch.nn.functional.softmax(
+        logits)[torch.arange(len(labels)), labels]
 
     # extracting intervals
-    # TODO: totally different algorithm
     diffs = torch.diff(labels == speech_label,
-                       prepend=torch.tensor([False], device=device))
+                       prepend=torch.tensor([False]))
     intervals = time_stamps[diffs]
 
     if intervals.shape[0] == 0:
@@ -127,7 +179,7 @@ def extract_intervals(
     if intervals.shape[0] % 2 != 0:
         is_complete = False
         intervals = torch.cat(
-            [intervals, time_stamps[-1:] + hop * stride], device=device)
+            [intervals, time_stamps[-1] + hop * stride])
 
     intervals = intervals.view(-1, 2)
 
@@ -151,20 +203,6 @@ def extract_intervals(
     if clean_intervals[0, 0] < 0:
         clean_intervals[0, 0] = 0
 
-    # Extracting probability for each interval
-    if return_probabilities:
-        start = 0
-        intervals_probs = []
-        for idx in clean_intervals.view(-1,).to(torch.long) // window_size_samples:
-            if idx < 0:
-                idx = probs.shape[0]
-            p = probs[start: idx].mean().item()
-            intervals_probs.append(p)
-            start = idx
-        if not is_complete:
-            intervals_probs.append(probs[start:].mean().item())
-        intervals_probs = torch.tensor(intervals_probs)
-
     # convert it to seconds
     if return_seconds:
         clean_intervals = clean_intervals / sample_rate
@@ -173,7 +211,7 @@ def extract_intervals(
     return W2vBSegmentationOutput(
         clean_intervals=clean_intervals,
         intervals=intervals.cpu(),
-        probs=intervals_probs.cpu() if return_probabilities else None,
+        probs=None,
         is_complete=is_complete,
     )
 
