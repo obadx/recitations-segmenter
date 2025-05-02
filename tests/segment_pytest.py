@@ -1,7 +1,16 @@
 import torch
 import pytest
 
-from recitations_segmenter.segment import batchify_input, WavInfo, collect_results, generate_time_stamps
+from recitations_segmenter.segment import (
+    batchify_input,
+    WavInfo,
+    collect_results,
+    generate_time_stamps,
+    extract_speech_intervals,
+    NoSpeechIntervals,
+    TooHighMinSpeechDuration,
+
+)
 from transformers import AutoFeatureExtractor
 import numpy as np
 
@@ -550,3 +559,210 @@ class TestGenerateTimeStamps:
         golden_stamps = torch.tensor(
             [0, 320, 640, 960, 1280, 1600, 2000, 2320, 2640, 2960, 3280, 3600, 4000, 4320, 4640, 4960, 5280, 5600, 6000, 6320])
         assert (golden_stamps == time_stamps).all()
+
+
+class TestExtractSpeechInervals:
+    def test_merge_short_silence_and_no_pad(self):
+        """Test merging short silence intervals and applying padding."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+        ])
+        hop, stride = 160, 2
+        time_stamps = torch.arange(len(logits)) * \
+            hop * stride  # [0, 320, 640, 960]
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_silence_duration_ms=30,
+            min_speech_duration_ms=30,
+            pad_duration_ms=0,
+            speech_label=1,
+            sample_rate=16000,
+            hop=hop,
+            stride=stride,
+        )
+
+        print(output.clean_speech_intervals)
+        print(output.speech_intervals)
+
+        expected_clean = torch.tensor([[0, 1280]], dtype=torch.long)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+        assert output.is_complete is False
+
+    def test_merge_short_silence_and_with_pad(self):
+        """Test merging short silence intervals and applying padding."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+        ])
+        hop, stride = 160, 2
+        time_stamps = torch.arange(len(logits)) * \
+            hop * stride  # [0, 320, 640, 960]
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_silence_duration_ms=30,
+            min_speech_duration_ms=30,
+            pad_duration_ms=30,
+            speech_label=1,
+            sample_rate=16000,
+            hop=hop,
+            stride=stride,
+        )
+
+        print(output.clean_speech_intervals)
+        print(output.speech_intervals)
+
+        expected_clean = torch.tensor([[0, 1760]], dtype=torch.long)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+        assert output.is_complete is False
+
+    def test_no_speech_intervals(self):
+        """Test when no speech intervals are detected."""
+        logits = torch.tensor([[1.0, 0.0]] * 4)  # all silence
+        time_stamps = torch.arange(4) * 160 * 2
+
+        with pytest.raises(NoSpeechIntervals):
+            extract_speech_intervals(
+                logits=logits,
+                time_stamps=time_stamps,
+                speech_label=1,
+                silence_label=0,
+            )
+
+    def test_too_high_min_speech_duration(self):
+        """Test when min_speech_duration removes all intervals."""
+        logits = torch.tensor([[0.0, 1.0]] * 2)  # two speech frames
+        time_stamps = torch.tensor([0, 320])  # interval [0, 320] (320 samples)
+
+        with pytest.raises(TooHighMinSpeechDuration):
+            extract_speech_intervals(
+                logits=logits,
+                time_stamps=time_stamps,
+                min_speech_duration_ms=50,  # 800 samples
+                sample_rate=16000,
+                speech_label=1,
+            )
+
+    def test_return_seconds(self):
+        """Test intervals returned in seconds."""
+        logits = torch.tensor([[0.0, 1.0]] * 2)  # two speech frames
+        # interval [0, 320] (0.02 seconds)
+        time_stamps = torch.tensor([0, 320])
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_speech_duration_ms=20,  # 320 samples
+            pad_duration_ms=30,  # 480 samples
+            return_seconds=True,
+            sample_rate=16000,
+            speech_label=1,
+        )
+        # [0, 640] -> [0, 640 + 480] [0, 1120]
+
+        expected_clean = torch.tensor([[0.0, 0.07]], dtype=torch.float32)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+
+    def test_padding_clamping(self):
+        """Test padding clamping to avoid negative start."""
+        logits = torch.tensor([[0.0, 1.0]] * 1)  # one speech frame
+        time_stamps = torch.tensor([0])  # interval [0, 320] after appending
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            pad_duration_ms=30,  # 480 samples
+            min_silence_duration_ms=1000,
+            min_speech_duration_ms=0,
+            sample_rate=16000,
+            speech_label=1,
+        )
+        # [0, 320 + 480] -> [0, 800]
+
+        expected_clean = torch.tensor([[0, 800]], dtype=torch.long)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+
+    def test_complete_intervals(self):
+        """Test intervals ending with silence (is_complete=True)."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+        ])
+        time_stamps = torch.arange(len(logits)) * 160 * 2
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            speech_label=1,
+        )
+
+        assert output.is_complete is True
+
+    def test_merge_multiple_silences(self):
+        """Test merging multiple short silences."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+        ])
+        time_stamps = torch.arange(len(logits)) * 160 * 2
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_silence_duration_ms=50,  # 800 samples
+            min_speech_duration_ms=0,
+            pad_duration_ms=0,
+            speech_label=1,
+            sample_rate=16000,
+        )
+        # [0, 1600 + 320] -> [0, 1920]
+        print(output.clean_speech_intervals)
+
+        # Expect single merged interval due to short silences
+        assert output.clean_speech_intervals.shape[0] == 1
+        expected_clean = torch.tensor([[0, 1920]], dtype=torch.long)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+
+    # TODO:
+    def test_real_case_silence_only(self):
+        """Test merging multiple short silences."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+        ])
+        time_stamps = torch.arange(len(logits)) * 160 * 2
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_silence_duration_ms=50,  # 800 samples
+            min_speech_duration_ms=0,
+            pad_duration_ms=0,
+            speech_label=1,
+            sample_rate=16000,
+        )
+        # [0, 1600 + 320] -> [0, 1920]
+        print(output.clean_speech_intervals)
+
+        # Expect single merged interval due to short silences
+        assert output.clean_speech_intervals.shape[0] == 1
+        expected_clean = torch.tensor([[0, 1920]], dtype=torch.long)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)

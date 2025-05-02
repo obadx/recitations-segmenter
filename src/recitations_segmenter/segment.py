@@ -32,8 +32,8 @@ class W2vBSegmentationOutput:
         is_complete (bool): wether the interval ends with silence (complete) or not
     """
 
-    clean_intervals: torch.FloatTensor
-    intervals: torch.FloatTensor
+    clean_speech_intervals: torch.FloatTensor
+    speech_intervals: torch.FloatTensor
     probs: torch.FloatTensor
     is_complete: bool
 
@@ -109,7 +109,7 @@ def remove_silence_intervals(
 
 # TODO:
 # * add return prbabilities
-def extract_intervals(
+def extract_speech_intervals(
     logits: torch.Tensor,
     time_stamps: torch.LongTensor,
     min_silence_duration_ms=30,
@@ -123,7 +123,7 @@ def extract_intervals(
     return_probabilities=False,
     return_seconds=False,
 ) -> W2vBSegmentationOutput:
-    """Extracts and processes speech/silence intervals from model logits.
+    """Extracts and processes speech intervals from model logits.
 
     Args:
         logits: Model output tensor of shape (T, num_classes)
@@ -141,8 +141,10 @@ def extract_intervals(
 
     Returns:
         W2vBSegmentationOutput: Named tuple containing:
-            - clean_intervals: Processed speech intervals after filtering/padding
-            - intervals: Raw extracted intervals before filtering
+            - clean_intervals: Tensor of shape (N, 2) containing speech intervals after filtering.
+                Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
+            - intervals: Tensor of shape (N, 2) containing raw speech intervals before filtering.
+                Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
             - probs: Class probabilities (None if not requested)
             - is_complete: Whether audio processing completed normally
 
@@ -164,7 +166,7 @@ def extract_intervals(
     labels = logits.argmax(dim=-1)
     # TODO: returning probabilities
     probs = torch.nn.functional.softmax(
-        logits)[torch.arange(len(labels)), labels]
+        logits, dim=-1)[torch.arange(len(labels)), labels]
 
     # extracting intervals
     diffs = torch.diff(labels == speech_label,
@@ -179,7 +181,7 @@ def extract_intervals(
     if intervals.shape[0] % 2 != 0:
         is_complete = False
         intervals = torch.cat(
-            [intervals, time_stamps[-1] + hop * stride])
+            [intervals, time_stamps[-1:] + hop * stride])
 
     intervals = intervals.view(-1, 2)
 
@@ -200,8 +202,8 @@ def extract_intervals(
     padding = torch.ones_like(clean_intervals) * padding_samples
     padding[:, 0] *= -1
     clean_intervals += padding
-    if clean_intervals[0, 0] < 0:
-        clean_intervals[0, 0] = 0
+    # avoiding negative samples
+    clean_intervals[:, 0] = torch.clamp(clean_intervals[:, 0], min=0)
 
     # convert it to seconds
     if return_seconds:
@@ -209,8 +211,8 @@ def extract_intervals(
         intervals = intervals / sample_rate
 
     return W2vBSegmentationOutput(
-        clean_intervals=clean_intervals,
-        intervals=intervals.cpu(),
+        clean_speech_intervals=clean_intervals,
+        speech_intervals=intervals.cpu(),
         probs=None,
         is_complete=is_complete,
     )
@@ -444,7 +446,7 @@ def segment_recitations(
             hop=processor_hop,
             stride=processor_stride,
         )
-        out = extract_intervals(
+        out = extract_speech_intervals(
             logits,
             time_stamps,
             min_silence_duration_ms=min_silence_duration_ms,
