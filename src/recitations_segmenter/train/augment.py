@@ -459,6 +459,17 @@ def calculate_overlap(
 
 
 def calc_frames(L, W=400, H=160, S=2):
+    """Calulate the number of wav2vecBert processor num of frames given the input wav length
+    This can be achives by:
+    from transformers import AutoFeatureExtractor
+    processor = AutoFeatureExtractor.from_pretrained('facebook/w2v-bert-2.0')
+    processor(np.zeros(15500), return_tensors='np', sampling_rate=16000)['attention_mask'][0].sum()
+    args:
+        L: wav length
+        W: window length
+        H: hop length
+        S: stride
+    """
     return max(0, int(1 + np.floor((L - W) / H)) // S)
 
 
