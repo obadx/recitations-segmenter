@@ -2,16 +2,43 @@ from dataclasses import dataclass
 from typing import Sequence
 
 import torch
+import torchaudio
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 from transformers.models.wav2vec2_bert import Wav2Vec2BertForAudioFrameClassification
 from transformers import Wav2Vec2BertProcessor
 from tqdm import tqdm
 
-# TODO:
-# batchify
-# inferece
-# augmenting results
+
+def read_audio(path: str,
+               sampling_rate: int = 16000):
+    list_backends = torchaudio.list_audio_backends()
+
+    assert len(list_backends) > 0, 'The list of available backends is empty, please install backend manually. \
+                                    \n Recommendations: \n \tSox (UNIX OS) \n \tSoundfile (Windows OS, UNIX OS) \n \tffmpeg (Windows OS, UNIX OS)'
+
+    try:
+        effects = [
+            ['channels', '1'],
+            ['rate', str(sampling_rate)]
+        ]
+
+        wav, sr = torchaudio.sox_effects.apply_effects_file(
+            path, effects=effects)
+    except:
+        wav, sr = torchaudio.load(path)
+
+        if wav.size(0) > 1:
+            wav = wav.mean(dim=0, keepdim=True)
+
+        if sr != sampling_rate:
+            transform = torchaudio.transforms.Resample(orig_freq=sr,
+                                                       new_freq=sampling_rate)
+            wav = transform(wav)
+            sr = sampling_rate
+
+    assert sr == sampling_rate
+    return wav.squeeze(0)
 
 
 class NoSpeechIntervals(Exception):
@@ -26,10 +53,12 @@ class TooHighMinSpeechDuration(Exception):
 class W2vBSegmentationOutput:
     """
     Attrubutes:
-        intervlas (torch.FloatTensor): the actual speech intervlas of the model without any cleaning (in seconds)
-        pobs: (torch.FloatTensor): the average probabilty for every speech segment for `intervals` without cleaning. Same shape as `intervlas`
-        clean_intervlas (torch.FloatTensor): the speech intervlas after merging short silecne intervals (< min_silence_duration_ms) in seconds
-        is_complete (bool): wether the interval ends with silence (complete) or not
+        - clean_speech_intervals: Tensor of shape (N, 2) containing speech intervals after filtering.
+                Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
+        - speech_intervals: Tensor of shape (N, 2) containing raw speech intervals before filtering.
+                Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
+        - probs: Class probabilities (None if not requested)
+        - is_complete: Whether audio processing completed normally
     """
 
     clean_speech_intervals: torch.FloatTensor
@@ -62,6 +91,7 @@ def remove_small_speech_intervals(
         speech_intervals: Tensor of shape (N, 2) containing speech intervals.
             Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
         min_speech_duration_samples: Minimum allowed duration (in samples) for a speech segment.
+            speech intervals durations < `min_speech_duration_ms` will be removed
 
     Returns:
         torch.Tensor: Filtered speech intervals tensor of shape (M, 2), where M <= N.
@@ -85,6 +115,7 @@ def remove_silence_intervals(
         speech_intervals: Tensor of shape (N, 2) containing speech intervals.
             Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
         min_silence_duration_samples: Minimum allowed silence duration (in samples).
+            silence durations < `min_silence_duration_ms` will be merged into speech durations
 
     Returns:
         torch.Tensor: Filtered speech intervals tensor of shape (M, 2), where M <= N.
@@ -128,22 +159,24 @@ def extract_speech_intervals(
     Args:
         logits: Model output tensor of shape (T, num_classes)
         time_stamps: Tensor of shape (T,) containing frame timestamps in samples
-        min_silence_duration_ms: Minimum silence duration (ms) between speech segments
+        min_silence_duration_ms: Minimum silence duration (ms) between speech segments.
+            silence durations < `min_silence_duration_ms` will be merged into speech durations
         min_speech_duration_ms: Minimum duration (ms) for a valid speech segment
+            speech intervals durations < `min_speech_duration_ms` will be removed
         pad_duration_ms: Padding duration (ms) to add around speech segments
         speech_label: Class index representing speech
         silence_label: Class index representing silence
         sample_rate: Audio sample rate in Hz
-        hop: Hop length used in feature extraction
-        stride: Stride factor for timestamp calculation
+        hop: Hop length of Wav2Vec2BertProcessor used in feature extraction
+        stride: Stride factor of `Wav2Vec2BertProcessor` for timestamp calculation
         return_probabilities: Whether to return class probabilities
         return_seconds: Whether to return intervals in seconds instead of samples
 
     Returns:
-        W2vBSegmentationOutput: Named tuple containing:
-            - clean_intervals: Tensor of shape (N, 2) containing speech intervals after filtering.
+        W2vBSegmentationOutput:
+            - clean_speech_intervals: Tensor of shape (N, 2) containing speech intervals after filtering.
                 Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
-            - intervals: Tensor of shape (N, 2) containing raw speech intervals before filtering.
+            - speech_intervals: Tensor of shape (N, 2) containing raw speech intervals before filtering.
                 Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
             - probs: Class probabilities (None if not requested)
             - is_complete: Whether audio processing completed normally
@@ -319,7 +352,7 @@ def generate_time_stamps(
 
     time_stamps = [0, 320, 1000, 1320, 2000]
                    ^   ^     ^    ^
-                   ^   ^     ^    ^     last seg    
+                   ^   ^     ^    ^     last seg
                  first seg  second seg
 
     """
@@ -340,49 +373,64 @@ def segment_recitations(
     model: Wav2Vec2BertForAudioFrameClassification,
     processor: Wav2Vec2BertProcessor,
     batch_size=64,
+    min_silence_duration_ms=30,
+    min_speech_duration_ms=30,
+    pad_duration_ms=30,
+    device=torch.device('cpu'),
+    dtype=torch.bfloat16,
+    return_probabilities=False,
+    return_seconds=False,
     sample_rate=16000,
     processor_window=400,
     processor_hop=160,
     processor_stride=2,
-    max_duration_ms=20000,
-    min_silence_duration_ms=30,
-    min_speech_duration_ms=30,
-    pad_duration_ms=30,
+    max_duration_ms=19995,
     speech_label=1,
     silence_label=0,
-    device=torch.device('cpu'),
-    dtype=torch.bfloat16,
-    return_probabilities=False,
 ) -> list[W2vBSegmentationOutput]:
-    """Extractes Speech Intervals from input `wav`
-
-    Extractes speech Intervals using https://github.com/snakers4/silero-vad/tree/v4.0stable v4.0 model
-    The model is located in: https://github.com/snakers4/silero-vad/blob/v4.0stable/files/silero_vad.jit
-    with winodw size 1536
+    """Segment audio waveforms into speech intervals using Wav2Vec2Bert model.
 
     Args:
-        waves (list[torch.FloatTensor]): Input audio waveform as a list PyTorch tensors.
-        sample_rate (int, optional): Sampling rate of the audio. Defaults to 16000.
-        model: (torch.nn.Module): silero VAD model to use for segmentation. Defaults is  snakers4/silero-vad v4.0 model.
-        window_size_samples (int, optional):  Window size in samples used for VAD processing. Defaults to 1536.
-        threshold (float, optional): Probability threshold for speech detection. Defaults to 0.3.
-        min_silence_duration_ms (int, optional): Minimum duration of silence in milliseconds to be considered a segment boundary. Defaults to 30.
-        min_speech_duration_ms (int, optional): The Minimum speech duration in milliseconds will be removed and marked as silence.
-        pad_duration_ms (int, optional): Duration of padding in milliseconds to add to the beginning and end of each speech segment. Defaults to 30.
-        device (torch.device, optional): Device to run the model on (e.g., 'cpu' or 'cuda'). Defaults to torch.device('cpu').
-        return_probabilities (bool, optional): If True, return the average probabilities for each speech segment. Defaults to False.
+        waves: List of audio waveforms to process (each as FloatTensor)
+        model: Loaded Wav2Vec2BertForAudioFrameClassification model
+        processor: Wav2Vec2BertProcessor for feature extraction
+        batch_size: Number of samples per batch
+        sample_rate: Input audio sampling rate (must be 16000)
+        processor_window: Processor window size (fixed at 400 samples)
+        processor_hop: Processor hop length (fixed at 160 samples)
+        processor_stride: Processor stride (fixed at 2)
+        max_duration_ms: Maximum chunk duration in ms for processing (2-20000)
+        min_silence_duration_ms: Minimum silence duration (ms) between speech segments.
+            silence durations < `min_silence_duration_ms` will be merged into speech durations
+        min_speech_duration_ms: Minimum duration (ms) for a valid speech segment
+            speech intervals durations < `min_speech_duration_ms` will be removed
+        pad_duration_ms: Padding to add around detected speech segments
+        speech_label: Class index for speech segments
+        silence_label: Class index for silence segments
+        device: Torch device for inference
+        dtype: Data type for model computation only. for post processing we use `torch.float32`
+        return_probabilities: Whether to return class probabilities
+        return_probabilities: Whether to return class probabilities
+        return_probabilities: Whether to return seconds or samples for speech durations
 
     Returns:
-        list[SegmentationOutput]: with:
-            * clean_intervlas (torch.FloatTensor): the speech intervlas after merging short silecne intervals (< min_silence_duration_ms) in seconds
-            * intervlas (torch.FloatTensor): the actual speech intervlas of the model without any cleaning (in seconds)
-            * pobs: (torch.FloatTensor): the average probabilty for every speech segment for `intervals` without cleaning. Same shape as `intervlas`.
-                If `return_probabilities` is `True` else return `None`
-    """
-    # assert isinstance(wav, torch.Tensor), (
-    #     f'`wav` should be tensor got `{type(wav)}`')
+        list[W2vBSegmentationOutput]:
+        - clean_speech_intervals: Tensor of shape (N, 2) containing speech intervals after filtering.
+            Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
+        - speech_intervals: Tensor of shape (N, 2) containing raw speech intervals before filtering.
+            Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
+        - probs: Class probabilities (None if not requested)
+        - is_complete: Whether audio processing completed normally
 
-    # TODO: assert if the max_duration_ms does not produce %2 samples
+    Raises:
+        NoSpeechIntervals: If no speech segments detected in one of the audio
+        TooHighMinSpeechDuration: If filtering removes all speech segments
+
+    Note:
+        - Processes audio in chunks of max_duration_ms for GPU memory efficiency
+        - Input waveforms are automatically padded and batched
+        - Final interval end is clamped to (audio_length + hop*stride) if not provided
+    """
 
     assert processor_hop == 160, 'This a pre-defined  value for the Wav2Vec2BertProcessor processor Do not change it'
     assert processor_window == 400, 'This a pre-defined  value for the Wav2Vec2BertProcessor processor Do not change it'
@@ -390,10 +438,12 @@ def segment_recitations(
     assert sample_rate == 16000, 'This a pre-defined  value for the Wav2Vec2BertProcessor processor Do not change it'
     assert max_duration_ms <= 20000 and max_duration_ms >= 2, 'We fine-tune W2vecBert on max duration of 20 secnds during training'
 
-    max_duration_sampels = int(max_duration_ms * sample_rate / 1000)
+    assert next(model.parameters()
+                ).device == device, "Model not on target device!"
+    assert next(model.parameters()
+                ).dtype == dtype, "Model not in target dtype!"
 
-    max_frames = int(
-        1 + np.floor((max_duration_sampels - processor_window) / processor_hop))
+    max_duration_sampels = int(max_duration_ms * sample_rate / 1000)
 
     # conveting input to batches
     wav_infos, wav_batches = batchify_input(
@@ -403,6 +453,7 @@ def segment_recitations(
     )
 
     # Run infernce on batches
+    model.eval()
     batches_logits: list[torch.FloatTensor] = []
     for batch in tqdm(wav_batches):
         model_inputs = processor(
@@ -410,8 +461,8 @@ def segment_recitations(
             sampling_rate=sample_rate,
             return_tensors="pt",
         )
-        input_features = model_inputs['input_features'].to(dtype).to(device)
-        attention_mask = model_inputs['attention_mask'].to(dtype).to(device)
+        input_features = model_inputs['input_features'].to(device, dtype=dtype)
+        attention_mask = model_inputs['attention_mask'].to(device, dtype=dtype)
         logits = model(
             input_features=input_features,
             attention_mask=attention_mask,
@@ -428,6 +479,7 @@ def segment_recitations(
         processor_stride=processor_stride
     )
 
+    # Knowing the max feature lens for every input
     max_features_len = processor(
         torch.zeros(max_duration_sampels),
         sampling_rate=sample_rate,
@@ -455,8 +507,10 @@ def segment_recitations(
             speech_label=speech_label,
             silence_label=silence_label,
             sample_rate=sample_rate,
+            hop=processor_hop,
+            stride=processor_stride,
             return_probabilities=return_probabilities,
-
+            return_seconds=return_seconds,
         )
         outputs.append(out)
 

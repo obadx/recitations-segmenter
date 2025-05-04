@@ -12,9 +12,26 @@ version = "1.0.0"
 authors = [
   { name="Abdullah", email="abdullahamlyossef@gmail.com" },
 ]
-description = "Split The Holy Quran Recitations based on وقف (pause)"
+description = "Split The Holy Quran Recitations based on وفق (pause)"
 readme = "README.md"
 dependencies = [
+  "torch==2.6.0",
+  "numpy",
+  "torchaudio",
+  "transformers==4.50.3",
+]
+requires-python = ">=3.10,<3.13"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+# Optional dependencies
+[project.optional-dependencies]
+# NOTE: All depencet package runs on python 3.12
+# TODO: Add specific python version (3.12) for augment
+augment = [
   "pypdl==1.4.4",
   "quran-transcript @ git+https://github.com/obadx/quran-transcript.git",
   "filetype==1.2.0",
@@ -30,17 +47,6 @@ dependencies = [
   "transformers==4.50.3",
   "pyaml",
   "pydantic==2.11.3",
-]
-requires-python = ">=3.10,<3.13"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-
-# Optional dependencies
-[project.optional-dependencies]
-augment = [
   "datasets==3.3.2",
   "huggingface_hub",
   "audiomentations==0.40.0",
@@ -48,6 +54,7 @@ augment = [
   "pyroomacoustics>=0.7.4",
   "pytest==8.3.5",
 ]
+
 
 train = [
   "datasets==3.3.2",

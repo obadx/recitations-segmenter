@@ -738,31 +738,213 @@ class TestExtractSpeechInervals:
         assert torch.allclose(output.clean_speech_intervals, expected_clean)
 
     # TODO:
-    def test_real_case_silence_only(self):
+    def test_real_case_no_filters(self):
         """Test merging multiple short silences."""
         logits = torch.tensor([
             [0.0, 1.0],  # speech
-            [0.0, 1.0],  # speech
             [1.0, 0.0],  # silence
             [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
             [1.0, 0.0],  # silence
             [0.0, 1.0],  # speech
         ])
-        time_stamps = torch.arange(len(logits)) * 160 * 2
+        hop, stride = 10, 1
+        time_stamps = torch.arange(len(logits)) * hop * stride
 
         output = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
-            min_silence_duration_ms=50,  # 800 samples
+            min_silence_duration_ms=0,
             min_speech_duration_ms=0,
             pad_duration_ms=0,
             speech_label=1,
-            sample_rate=16000,
+            sample_rate=10000,
+            hop=hop,
+            stride=stride,
         )
         # [0, 1600 + 320] -> [0, 1920]
         print(output.clean_speech_intervals)
 
-        # Expect single merged interval due to short silences
-        assert output.clean_speech_intervals.shape[0] == 1
-        expected_clean = torch.tensor([[0, 1920]], dtype=torch.long)
+        expected_clean = torch.tensor([
+            [0, 10],
+            [20, 60],
+            [100, 120],
+            [140, 150],
+        ],
+            dtype=torch.long)
+        assert torch.allclose(
+            output.clean_speech_intervals, output.speech_intervals)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+
+    def test_real_case_silence_only(self):
+        """Test merging multiple short silences."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+        ])
+        hop, stride = 10, 1
+        time_stamps = torch.arange(len(logits)) * hop * stride
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_silence_duration_ms=2,  # 20 samples
+            min_speech_duration_ms=0,
+            pad_duration_ms=0,
+            speech_label=1,
+            sample_rate=10000,
+            hop=hop,
+            stride=stride,
+        )
+        print(output.clean_speech_intervals)
+        expected_clean = torch.tensor([
+            [0, 60],
+            [100, 120],
+            [140, 150],
+        ],
+            dtype=torch.long)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+
+    def test_real_case_silence_collaspe_all(self):
+        """Test merging multiple short silences."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+        ])
+        hop, stride = 10, 1
+        time_stamps = torch.arange(len(logits)) * hop * stride
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_silence_duration_ms=8,  # 80 samples
+            min_speech_duration_ms=0,
+            pad_duration_ms=0,
+            speech_label=1,
+            sample_rate=10000,
+            hop=hop,
+            stride=stride,
+        )
+        print(output.clean_speech_intervals)
+        expected_clean = torch.tensor([
+            [0, 150],
+        ],
+            dtype=torch.long)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+
+    def test_real_case_silence_speech(self):
+        """Test merging multiple short silences."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+        ])
+        hop, stride = 10, 1
+        time_stamps = torch.arange(len(logits)) * hop * stride
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_silence_duration_ms=2,  # 20 samples
+            min_speech_duration_ms=1.1,  # 11 samples
+            pad_duration_ms=0,
+            speech_label=1,
+            sample_rate=10000,
+            hop=hop,
+            stride=stride,
+        )
+        print(output.clean_speech_intervals)
+        expected_clean = torch.tensor([
+            [0, 60],
+            [100, 120],
+        ],
+            dtype=torch.long)
+        assert torch.allclose(output.clean_speech_intervals, expected_clean)
+
+    def test_real_case_silence_speech_padd(self):
+        """Test merging multiple short silences."""
+        logits = torch.tensor([
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+            [0.0, 1.0],  # speech
+            [1.0, 0.0],  # silence
+            [1.0, 0.0],  # silence
+            [0.0, 1.0],  # speech
+        ])
+        hop, stride = 10, 1
+        time_stamps = torch.arange(len(logits)) * hop * stride
+
+        output = extract_speech_intervals(
+            logits=logits,
+            time_stamps=time_stamps,
+            min_silence_duration_ms=2,  # 20 samples
+            min_speech_duration_ms=1.1,  # 11 samples
+            pad_duration_ms=3,  # 30 samples
+            speech_label=1,
+            sample_rate=10000,
+            hop=hop,
+            stride=stride,
+        )
+        print(output.clean_speech_intervals)
+        expected_clean = torch.tensor([
+            [0, 90],
+            [70, 150],
+        ],
+            dtype=torch.long)
         assert torch.allclose(output.clean_speech_intervals, expected_clean)
