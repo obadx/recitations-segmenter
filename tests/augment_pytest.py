@@ -8,6 +8,7 @@ from recitations_segmenter.train.augment import (
     calculate_overlap,
     annotate,
     extract_features_and_labels,
+    calc_frames,
 )
 
 
@@ -52,10 +53,6 @@ def test_calculate_overlap(intervals, window_start, window_end, expected):
     intervals_np = np.array(intervals)
     result = calculate_overlap(intervals_np, window_start, window_end)
     assert result == expected
-
-
-def calc_frames(L, W=400, H=160, S=2):
-    return int(1 + np.floor((L - W) / H)) // S
 
 
 @pytest.mark.parametrize(
