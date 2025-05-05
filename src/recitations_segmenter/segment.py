@@ -367,6 +367,15 @@ def generate_time_stamps(
     return time_stamps
 
 
+def check_devices(device1, device2) -> bool:
+    devices = torch.device(device1), torch.device(device2)
+    devices_ids = [0, 0]
+    for idx, device in enumerate(devices):
+        if device.index:
+            devices_ids[idx] = device.index
+    return (devices_ids[0] == devices_ids[1]) and (devices[0].type == devices[1].type)
+
+
 @torch.no_grad()
 def segment_recitations(
     waves: list[torch.FloatTensor],
@@ -438,8 +447,9 @@ def segment_recitations(
     assert sample_rate == 16000, 'This a pre-defined  value for the Wav2Vec2BertProcessor processor Do not change it'
     assert max_duration_ms <= 20000 and max_duration_ms >= 2, 'We fine-tune W2vecBert on max duration of 20 secnds during training'
 
-    assert next(model.parameters()
-                ).device == device, "Model not on target device!"
+    model_device = next(model.parameters()).device
+    assert check_devices(model_device, device), (
+        f"Device mismatch!. Model Device: {model_device}, Device: {device}")
     assert next(model.parameters()
                 ).dtype == dtype, "Model not in target dtype!"
 
