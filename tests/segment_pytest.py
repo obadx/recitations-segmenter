@@ -210,15 +210,6 @@ class TestBatchify:
         with pytest.raises(AssertionError):
             wav_infos, batches = batchify_input(waves, max_len, batch_size)
 
-    def test_device_check(self):
-        waves = [torch.ones(5).to('cuda')]  # Input on GPU
-        max_len = 5
-        batch_size = 1
-        _, batches = batchify_input(waves, max_len, batch_size)
-
-        for batch in batches:
-            assert batch.device == torch.device('cpu')
-
 
 class TestCollect:
     processor = AutoFeatureExtractor.from_pretrained('facebook/w2v-bert-2.0')

@@ -13,8 +13,9 @@ if __name__ == '__main__':
         device_map=device,
     )
 
-    file_path = '/home/abdullah/Downloads/002091.wav'
+    file_path = '/home/abdullah/Downloads/002282.mp3'
     wav = read_audio(file_path)
+    print(wav.shape)
 
     output = segment_recitations(
         [wav],
@@ -23,6 +24,10 @@ if __name__ == '__main__':
         return_seconds=True,
         device=device,
         dtype=dtype,
+        min_silence_duration_ms=30,
+        min_speech_duration_ms=30,
+        pad_duration_ms=30,
+        batch_size=4,
     )
 
     print(len(output))

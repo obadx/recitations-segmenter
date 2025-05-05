@@ -259,22 +259,29 @@ def batchify_input(
     """
     Spliting input waves into batches to utlize GPU memory most at inference
     """
-    batches = []
+    segments_len = 0
+    for w in waves:
+        assert w.device.type == 'cpu', 'All wav inputs has to be on `cpu`'
+        assert len(w) > 0, 'wav length should be > 0 got zerolength tensor'
+        segments_len += int(np.ceil(len(w) / max_len_samples))
+
+    batches = torch.zeros(segments_len, max_len_samples, dtype=torch.float32)
+    occupied_len = 0
     wav_infos = []
     for wav in waves:
-        assert len(wav) > 0, 'wav length should be > 0 got zerolength tensor'
-        wav = wav.to('cpu')  # insure that every wav is on cpu
-        pad = torch.zeros(
-            max_len_samples - len(wav) % max_len_samples if len(wav) % max_len_samples != 0 else 0)
-        padded_wav = torch.cat((wav, pad), dim=0)
-        idx_start = len(batches) % max_batch_size
-        batch_start = len(batches) // max_batch_size
+        pad_len = (max_len_samples -
+                   len(wav) % max_len_samples if len(wav) % max_len_samples != 0 else 0)
+        padded_wav = torch.nn.functional.pad(wav, (0, pad_len))
+        idx_start = occupied_len % max_batch_size
+        batch_start = occupied_len // max_batch_size
 
-        wav_chunks = list(padded_wav.split(max_len_samples))
-        batches += wav_chunks
+        wav_chunks = padded_wav.view(-1, max_len_samples)
+        batches[occupied_len: occupied_len +
+                wav_chunks.shape[0], :] = wav_chunks
+        occupied_len += wav_chunks.shape[0]
 
-        idx_end = len(batches) % max_batch_size
-        batch_end = (len(batches) - 1) // max_batch_size + 1
+        idx_end = occupied_len % max_batch_size
+        batch_end = (occupied_len - 1) // max_batch_size + 1
 
         # the case that the len of new wav chunck is the same as max_batch_size
         # and idx_start == 0 (it will bug if idx_end is 0 it has to be max_batch_size
@@ -289,8 +296,8 @@ def batchify_input(
             idx_in_batch_end=idx_end,
         ))
 
-    if batches:
-        batches = torch.stack(batches, dim=0).split(max_batch_size, dim=0)
+    if occupied_len:
+        batches = batches.split(max_batch_size, dim=0)
     return wav_infos, batches
 
 
@@ -458,46 +465,41 @@ def segment_recitations(
     # conveting input to batches
     wav_infos, wav_batches = batchify_input(
         waves,
-        int(max_duration_ms * sample_rate),
+        max_duration_sampels,
         batch_size,
     )
 
     # Run infernce on batches
     model.eval()
     batches_logits: list[torch.FloatTensor] = []
-    for batch in tqdm(wav_batches):
+    for idx, batch in enumerate(tqdm(wav_batches)):
         model_inputs = processor(
-            batch,
+            [b for b in batch],
             sampling_rate=sample_rate,
             return_tensors="pt",
         )
         input_features = model_inputs['input_features'].to(device, dtype=dtype)
         attention_mask = model_inputs['attention_mask'].to(device, dtype=dtype)
-        logits = model(
+        model_out = model(
             input_features=input_features,
             attention_mask=attention_mask,
+            return_dict=False,
         )
         # Going back to cpu
+        logits = model_out[0]
         batches_logits.append(logits.cpu().to(torch.float32))
 
     # Aggeregate batches
     collected_logits: list[torch.FloatTensor] = collect_results(
         wav_infos,
         batches_logits,
-        processor_window=processor_window,
-        prcoessor_hop=processor_hop,
-        processor_stride=processor_stride
     )
 
     # Knowing the max feature lens for every input
-    max_features_len = processor(
-        torch.zeros(max_duration_sampels),
-        sampling_rate=sample_rate,
-        return_tensors="pt",
-    )['attention_mask'].shape[1]
+    max_features_len = input_features.shape[1]
 
     # Extract speech intervals for every input
-    outputs = list[W2vBSegmentationOutput] = []
+    outputs: list[W2vBSegmentationOutput] = []
     for logits in collected_logits:
 
         time_stamps = generate_time_stamps(
