@@ -2,6 +2,12 @@
 
 A Machine Learning Model that split a recitations on pauses (وقف) not by Ayah.
 
+## TODO
+* [ ] Project Description
+* [ ] API docs
+* [ ] train docs
+* [ ] datasets docs (create and description)
+
 ## Installtion
 
 > Note: for data builindg we worked on python 3.13 and for augmentations we worked to python 3.12 due to audiomentatiosn depends on scipy
