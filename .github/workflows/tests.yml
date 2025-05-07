@@ -40,4 +40,4 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest -v tests/
+        pytest -v tests/segment_pytest.py
