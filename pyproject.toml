@@ -20,9 +20,12 @@ dependencies = [
   "torchaudio",
   "transformers>=4.50.3",
 ]
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.10,<=3.13"
 classifiers = [
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
@@ -31,6 +34,10 @@ classifiers = [
 [project.optional-dependencies]
 # NOTE: All depencet package runs on python 3.12
 # TODO: Add specific python version (3.12) for augment
+test = [
+  "pytest",
+]
+
 augment = [
   "pypdl==1.4.4",
   "quran-transcript @ git+https://github.com/obadx/quran-transcript.git",
