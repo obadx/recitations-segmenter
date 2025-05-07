@@ -952,9 +952,9 @@ def test_segment_recitations():
         "obadx/recitation-segmenter-v2")
     model = AutoModelForAudioFrameClassification.from_pretrained(
         "obadx/recitation-segmenter-v2",
-        torch_dtype=dtype,
-        device_map=device,
     )
+
+    model.to(device, dtype=dtype)
 
     file_path = './assets/hussary_053001.mp3'
     wav = read_audio(file_path)

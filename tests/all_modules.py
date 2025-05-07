@@ -9,9 +9,9 @@ if __name__ == '__main__':
         "obadx/recitation-segmenter-v2")
     model = AutoModelForAudioFrameClassification.from_pretrained(
         "obadx/recitation-segmenter-v2",
-        torch_dtype=dtype,
-        device_map=device,
     )
+
+    model.to(device, dtype=dtype)
 
     file_path = './assets/dussary_002282.mp3'
     wav = read_audio(file_path)
