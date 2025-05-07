@@ -1,12 +1,22 @@
 # recitations-segmenter
 
+[![Tests](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml)
+
 A Machine Learning Model that split a recitations on pauses (وقف) not by Ayah.
 
 ## TODO
+
+* [x] Test the model on notebook
+* [ ] Add CI/CD checking python versions
+* [ ] Add commdnad line tool to API
 * [ ] Project Description
 * [ ] API docs
 * [ ] train docs
 * [ ] datasets docs (create and description)
+* [ ] Add lock file for reproudcing training
+* [ ] Steps to reprouduce Dev environment [see](https://chat.qwen.ai/s/75280423-a193-4f1b-a35b-93a5f8e03ff8?fev=0.0.87)
+* [ ] Add libsoundfile and ffmbeg as backend for reading mp3 files
+* [ ] publish to pypip
 
 ## Installtion
 
