@@ -20,7 +20,7 @@ dependencies = [
   "torchaudio",
   "transformers>=4.50.3",
 ]
-requires-python = ">=3.10,<=3.13"
+requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
