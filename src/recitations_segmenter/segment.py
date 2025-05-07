@@ -41,6 +41,26 @@ def read_audio(path: str,
     return wav.squeeze(0)
 
 
+def is_dtype_supported(dtype, device):
+    """
+    Checks if the specified torch dtype is supported by the currently available GPU.
+
+    Args:
+        dtype (torch.dtype): The data type to check for GPU support.
+
+    Returns:
+        bool: True if the dtype is supported by the GPU, False otherwise.
+    """
+    if not torch.cuda.is_available():
+        return True
+    try:
+        # Attempt to create an empty tensor of the given dtype on the GPU
+        torch.empty(0, dtype=dtype, device=device)
+        return True
+    except RuntimeError as e:
+        raise RuntimeError(f'{dtype} is not supported on this GPU as: {e}')
+
+
 class NoSpeechIntervals(Exception):
     pass
 
@@ -453,6 +473,9 @@ def segment_recitations(
     assert processor_stride == 2, 'This a pre-defined  value for the Wav2Vec2BertProcessor processor Do not change it'
     assert sample_rate == 16000, 'This a pre-defined  value for the Wav2Vec2BertProcessor processor Do not change it'
     assert max_duration_ms <= 20000 and max_duration_ms >= 2, 'We fine-tune W2vecBert on max duration of 20 secnds during training'
+
+    # checking if the dtype is supported by the GPU or not
+    is_dtype_supported(dtype, device)
 
     model_device = next(model.parameters()).device
     assert check_devices(model_device, device), (
