@@ -1,6 +1,11 @@
 import torch
 import pytest
 
+
+from transformers import AutoFeatureExtractor, AutoModelForAudioFrameClassification
+import numpy as np
+
+
 from recitations_segmenter.segment import (
     batchify_input,
     WavInfo,
@@ -9,10 +14,9 @@ from recitations_segmenter.segment import (
     extract_speech_intervals,
     NoSpeechIntervals,
     TooHighMinSpeechDuration,
-
+    read_audio,
+    segment_recitations,
 )
-from transformers import AutoFeatureExtractor
-import numpy as np
 
 
 class TestBatchify:
@@ -939,3 +943,36 @@ class TestExtractSpeechInervals:
         ],
             dtype=torch.long)
         assert torch.allclose(output.clean_speech_intervals, expected_clean)
+
+
+def test_segment_recitations():
+    device = torch.device('cpu')
+    dtype = torch.bfloat16
+    processor = AutoFeatureExtractor.from_pretrained(
+        "obadx/recitation-segmenter-v2")
+    model = AutoModelForAudioFrameClassification.from_pretrained(
+        "obadx/recitation-segmenter-v2",
+        torch_dtype=dtype,
+        device_map=device,
+    )
+
+    file_path = './assets/hussary_053001.mp3'
+    wav = read_audio(file_path)
+    print(wav.shape)
+
+    output = segment_recitations(
+        [wav],
+        model,
+        processor,
+        return_seconds=True,
+        device=device,
+        dtype=dtype,
+        min_silence_duration_ms=30,
+        min_speech_duration_ms=30,
+        pad_duration_ms=30,
+        batch_size=1,
+        max_duration_ms=2000,
+    )
+
+    print(output[0].clean_speech_intervals)
+    assert output[0].clean_speech_intervals.shape == (1, 2)

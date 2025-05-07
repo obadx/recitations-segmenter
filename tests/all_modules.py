@@ -13,7 +13,7 @@ if __name__ == '__main__':
         device_map=device,
     )
 
-    file_path = '/home/abdullah/Downloads/002282.mp3'
+    file_path = './assets/dussary_002282.mp3'
     wav = read_audio(file_path)
     print(wav.shape)
 
