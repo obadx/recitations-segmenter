@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Sequence
+import warnings
 
 import torch
 import torchaudio
@@ -173,6 +174,7 @@ def extract_speech_intervals(
     stride=2,
     return_probabilities=False,
     return_seconds=False,
+    wav_index=None,
 ) -> W2vBSegmentationOutput:
     """Extracts and processes speech intervals from model logits.
 
@@ -424,7 +426,7 @@ def segment_recitations(
     speech_label=1,
     silence_label=0,
 ) -> list[W2vBSegmentationOutput]:
-    """Segment audio waveforms into speech intervals using Wav2Vec2Bert model.
+    """Segment The Holy Quran rectiations into speech intervals based on وقف using Wav2Vec2Bert model.
 
     Args:
         waves: List of audio waveforms to process (each as FloatTensor)
@@ -473,6 +475,10 @@ def segment_recitations(
     assert processor_stride == 2, 'This a pre-defined  value for the Wav2Vec2BertProcessor processor Do not change it'
     assert sample_rate == 16000, 'This a pre-defined  value for the Wav2Vec2BertProcessor processor Do not change it'
     assert max_duration_ms <= 20000 and max_duration_ms >= 2, 'We fine-tune W2vecBert on max duration of 20 secnds during training'
+
+    if max_duration_ms != 19995:
+        warnings.warn(
+            'To get best resutls we recommend using `max_duration_ms` with 19995', UserWarning)
 
     # checking if the dtype is supported by the GPU or not
     is_dtype_supported(dtype, device)
