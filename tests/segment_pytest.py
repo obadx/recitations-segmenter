@@ -1,5 +1,9 @@
 import torch
 import pytest
+import subprocess
+import shutil
+from pathlib import Path
+import json
 
 
 from transformers import AutoFeatureExtractor, AutoModelForAudioFrameClassification
@@ -976,3 +980,22 @@ def test_segment_recitations():
 
     print(output[0].clean_speech_intervals)
     assert output[0].clean_speech_intervals.shape == (1, 2)
+
+
+def test_cli():
+    shutil.rmtree('./output', ignore_errors=True)
+    subprocess.run([
+        'recitations-segmenter',
+        './assets/hussary_053001.mp3',
+        '--max-duration-ms', '2000',
+        '-o', 'output',
+    ])
+
+    file_path = Path('./output/hussary_053001_speech_intervals.json')
+    assert file_path.is_file()
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+
+    assert data['is_complete']
+    assert len(data['clean_speech_intervals']) == 1
+    assert len(data['speech_intervals']) == 1
