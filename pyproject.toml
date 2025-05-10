@@ -72,6 +72,9 @@ train = [
   "tensorboard==2.19.0"
 ]
 
+[project.scripts]
+recitations-segmenter = "recitations_segmenter.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/obadx/recitations-segmenter"
 Issues = "https://github.com/obadx/recitations-segmenter/issues"
