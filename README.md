@@ -1,14 +1,23 @@
 # recitations-segmenter
 
 [![Tests](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml)
+[![Python 3.10](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg?query=job%3A%22Python+3.10%22)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml?query=job%3A%22Python+3.10%22)
+[![Python 3.11](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg?query=job%3A%22Python+3.11%22)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml?query=job%3A%22Python+3.11%22)
+[![Python 3.12](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg?query=job%3A%22Python+3.12%22)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml?query=job%3A%22Python+3.12%22)
+[![Python 3.13](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg?query=job%3A%22Python+3.13%22)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml?query=job%3A%22Python+3.13%22)
+
+<!-- [![Tests](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml) -->
 
 A Machine Learning Model that split a recitations on pauses (وقف) not by Ayah.
 
 ## TODO
 
-* [x] Test the model on notebook
-* [ ] Add CI/CD checking python versions
-* [ ] Add commdnad line tool to API
+* [x] Test the model on notebook.
+* [x] Add CI/CD checking python versions.
+* [x] Add commdnad line tool to API.
+* [x] Add pytest for the cli.
+* [x] Whether to raise execption or not if no speech found
+* [ ] Add caching mechanism.
 * [ ] Project Description
 * [ ] API docs
 * [ ] train docs

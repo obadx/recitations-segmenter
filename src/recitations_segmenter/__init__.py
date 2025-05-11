@@ -4,4 +4,5 @@ from .segment import (
     NoSpeechIntervals,
     TooHighMinSpeechDuration,
     read_audio,
+    clean_speech_intervals,
 )

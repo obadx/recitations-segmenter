@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import warnings
 
 import torch
 from transformers import AutoFeatureExtractor, AutoModelForAudioFrameClassification
@@ -11,6 +12,7 @@ from .segment import (
     TooHighMinSpeechDuration,
     read_audio,
     segment_recitations,
+    clean_speech_intervals,
 )
 
 SUPPORTED_EXTENSIONS = {".mp3", ".wav",
@@ -33,6 +35,10 @@ Examples:
 
   # Process directory of audio files
   recitations-segmenter /path/to/recitations/ --output ./segmentation_results
+
+
+  # Process: audio files and directory of audio files
+  recitations-segmenter input.mp3 /path/to/recitations/ --output ./segmentation_results
 
 
   # Adjust segmentation parameters
@@ -208,37 +214,51 @@ def main():
                 f'Error reading this media file: {file_path.absolute()}: {e}')
 
     # Segment the audio
+    # Extracting speech inervals in samples according to 16000 Sample rate
     outputs = segment_recitations(
         waves,
         model,
         processor,
         batch_size=args.batch_size,
-        min_silence_duration_ms=args.min_silence_duration_ms,
-        min_speech_duration_ms=args.min_speech_duration_ms,
-        pad_duration_ms=args.pad_duration_ms,
         max_duration_ms=args.max_duration_ms,
-        return_seconds=not args.return_samples,
         device=torch.device(args.device),
         dtype=dtype,
     )
 
     # Get the result (assuming one output per file)
-    for result, file_path in zip(outputs, valid_pathes):
+    for out, file_path in zip(outputs, valid_pathes):
 
-        # Prepare JSON data
-        json_data = {
-            "clean_speech_intervals": result.clean_speech_intervals.tolist(),
-            "speech_intervals": result.speech_intervals.tolist(),
-            "is_complete": result.is_complete,
-        }
+        try:
+            # Clean The speech intervals by:
+            # * merging small silence durations
+            # * remove small speech durations
+            # * add padding to each speech duration
+            clean_out = clean_speech_intervals(
+                out.speech_intervals,
+                out.is_complete,
+                min_silence_duration_ms=args.min_silence_duration_ms,
+                min_speech_duration_ms=args.min_speech_duration_ms,
+                pad_duration_ms=args.pad_duration_ms,
+                return_seconds=not args.return_samples,
+            )
 
-        # Generate output path
-        output_filename = f"{file_path.stem}_speech_intervals.json"
-        output_path = Path(args.output) / output_filename
+            # Prepare JSON data
+            json_data = {
+                "clean_speech_intervals": clean_out.clean_speech_intervals.tolist(),
+                "speech_intervals": clean_out.speech_intervals.tolist(),
+                "is_complete": clean_out.is_complete,
+            }
 
-        # Write JSON file
-        with open(output_path, "w+") as f:
-            json.dump(json_data, f, indent=4)
+            # Generate output path
+            output_filename = f"{file_path.stem}_speech_intervals.json"
+            output_path = Path(args.output) / output_filename
+
+            # Write JSON file
+            with open(output_path, "w+") as f:
+                json.dump(json_data, f, indent=4)
+        except Exception as e:
+            warnings.warn(f'There were an error while processing file: {
+                          file_path.absolute()}. {e}', UserWarning)
 
     if len(outputs) == 1:
         print('Speech Intervals:')

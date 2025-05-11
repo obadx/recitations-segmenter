@@ -20,6 +20,7 @@ from recitations_segmenter.segment import (
     TooHighMinSpeechDuration,
     read_audio,
     segment_recitations,
+    clean_speech_intervals,
 )
 
 
@@ -573,16 +574,19 @@ class TestExtractSpeechInervals:
         time_stamps = torch.arange(len(logits)) * \
             hop * stride  # [0, 320, 640, 960]
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
+            speech_label=1,
+            hop=hop,
+            stride=stride,
+        )
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
             min_silence_duration_ms=30,
             min_speech_duration_ms=30,
             pad_duration_ms=0,
-            speech_label=1,
-            sample_rate=16000,
-            hop=hop,
-            stride=stride,
         )
 
         print(output.clean_speech_intervals)
@@ -604,16 +608,20 @@ class TestExtractSpeechInervals:
         time_stamps = torch.arange(len(logits)) * \
             hop * stride  # [0, 320, 640, 960]
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
+            speech_label=1,
+            hop=hop,
+            stride=stride,
+        )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
             min_silence_duration_ms=30,
             min_speech_duration_ms=30,
             pad_duration_ms=30,
-            speech_label=1,
-            sample_rate=16000,
-            hop=hop,
-            stride=stride,
         )
 
         print(output.clean_speech_intervals)
@@ -629,11 +637,16 @@ class TestExtractSpeechInervals:
         time_stamps = torch.arange(4) * 160 * 2
 
         with pytest.raises(NoSpeechIntervals):
-            extract_speech_intervals(
+            samples_out = extract_speech_intervals(
                 logits=logits,
                 time_stamps=time_stamps,
                 speech_label=1,
                 silence_label=0,
+            )
+
+            clean_speech_intervals(
+                samples_out.speech_intervals,
+                samples_out.is_complete,
             )
 
     def test_too_high_min_speech_duration(self):
@@ -642,12 +655,16 @@ class TestExtractSpeechInervals:
         time_stamps = torch.tensor([0, 320])  # interval [0, 320] (320 samples)
 
         with pytest.raises(TooHighMinSpeechDuration):
-            extract_speech_intervals(
+            samples_out = extract_speech_intervals(
                 logits=logits,
                 time_stamps=time_stamps,
-                min_speech_duration_ms=50,  # 800 samples
-                sample_rate=16000,
                 speech_label=1,
+            )
+
+            clean_speech_intervals(
+                samples_out.speech_intervals,
+                samples_out.is_complete,
+                min_speech_duration_ms=50,  # 800 samples
             )
 
     def test_return_seconds(self):
@@ -656,15 +673,20 @@ class TestExtractSpeechInervals:
         # interval [0, 320] (0.02 seconds)
         time_stamps = torch.tensor([0, 320])
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
+            speech_label=1,
+        )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
             min_speech_duration_ms=20,  # 320 samples
             pad_duration_ms=30,  # 480 samples
             return_seconds=True,
-            sample_rate=16000,
-            speech_label=1,
         )
+
         # [0, 640] -> [0, 640 + 480] [0, 1120]
 
         expected_clean = torch.tensor([[0.0, 0.07]], dtype=torch.float32)
@@ -675,15 +697,20 @@ class TestExtractSpeechInervals:
         logits = torch.tensor([[0.0, 1.0]] * 1)  # one speech frame
         time_stamps = torch.tensor([0])  # interval [0, 320] after appending
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
-            pad_duration_ms=30,  # 480 samples
-            min_silence_duration_ms=1000,
-            min_speech_duration_ms=0,
-            sample_rate=16000,
             speech_label=1,
         )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
+            min_silence_duration_ms=1000,
+            pad_duration_ms=30,  # 480 samples
+            min_speech_duration_ms=0,
+        )
+
         # [0, 320 + 480] -> [0, 800]
 
         expected_clean = torch.tensor([[0, 800]], dtype=torch.long)
@@ -719,15 +746,20 @@ class TestExtractSpeechInervals:
         ])
         time_stamps = torch.arange(len(logits)) * 160 * 2
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
+            speech_label=1,
+        )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
             min_silence_duration_ms=50,  # 800 samples
             min_speech_duration_ms=0,
             pad_duration_ms=0,
-            speech_label=1,
-            sample_rate=16000,
         )
+
         # [0, 1600 + 320] -> [0, 1920]
         print(output.clean_speech_intervals)
 
@@ -759,17 +791,22 @@ class TestExtractSpeechInervals:
         hop, stride = 10, 1
         time_stamps = torch.arange(len(logits)) * hop * stride
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
-            min_silence_duration_ms=0,
-            min_speech_duration_ms=0,
-            pad_duration_ms=0,
             speech_label=1,
-            sample_rate=10000,
             hop=hop,
             stride=stride,
         )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
+            min_silence_duration_ms=0,
+            min_speech_duration_ms=0,
+            pad_duration_ms=0,
+        )
+
         # [0, 1600 + 320] -> [0, 1920]
         print(output.clean_speech_intervals)
 
@@ -806,17 +843,22 @@ class TestExtractSpeechInervals:
         hop, stride = 10, 1
         time_stamps = torch.arange(len(logits)) * hop * stride
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
-            min_silence_duration_ms=2,  # 20 samples
-            min_speech_duration_ms=0,
-            pad_duration_ms=0,
             speech_label=1,
-            sample_rate=10000,
             hop=hop,
             stride=stride,
         )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
+            min_silence_duration_ms=1.25,  # 20 samples
+            min_speech_duration_ms=0,
+            pad_duration_ms=0,
+        )
+
         print(output.clean_speech_intervals)
         expected_clean = torch.tensor([
             [0, 60],
@@ -848,17 +890,22 @@ class TestExtractSpeechInervals:
         hop, stride = 10, 1
         time_stamps = torch.arange(len(logits)) * hop * stride
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
-            min_silence_duration_ms=8,  # 80 samples
-            min_speech_duration_ms=0,
-            pad_duration_ms=0,
             speech_label=1,
-            sample_rate=10000,
             hop=hop,
             stride=stride,
         )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
+            min_silence_duration_ms=5,  # 80 samples
+            min_speech_duration_ms=0,
+            pad_duration_ms=0,
+        )
+
         print(output.clean_speech_intervals)
         expected_clean = torch.tensor([
             [0, 150],
@@ -888,17 +935,22 @@ class TestExtractSpeechInervals:
         hop, stride = 10, 1
         time_stamps = torch.arange(len(logits)) * hop * stride
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
-            min_silence_duration_ms=2,  # 20 samples
-            min_speech_duration_ms=1.1,  # 11 samples
-            pad_duration_ms=0,
             speech_label=1,
-            sample_rate=10000,
             hop=hop,
             stride=stride,
         )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
+            min_silence_duration_ms=1.25,  # 20 samples
+            min_speech_duration_ms=11/16,  # 11 samples
+            pad_duration_ms=0,
+        )
+
         print(output.clean_speech_intervals)
         expected_clean = torch.tensor([
             [0, 60],
@@ -929,17 +981,22 @@ class TestExtractSpeechInervals:
         hop, stride = 10, 1
         time_stamps = torch.arange(len(logits)) * hop * stride
 
-        output = extract_speech_intervals(
+        samples_out = extract_speech_intervals(
             logits=logits,
             time_stamps=time_stamps,
-            min_silence_duration_ms=2,  # 20 samples
-            min_speech_duration_ms=1.1,  # 11 samples
-            pad_duration_ms=3,  # 30 samples
             speech_label=1,
-            sample_rate=10000,
             hop=hop,
             stride=stride,
         )
+
+        output = clean_speech_intervals(
+            samples_out.speech_intervals,
+            samples_out.is_complete,
+            min_silence_duration_ms=20/16,  # 20 samples
+            min_speech_duration_ms=11/16,  # 11 samples
+            pad_duration_ms=30/16,  # 30 samples
+        )
+
         print(output.clean_speech_intervals)
         expected_clean = torch.tensor([
             [0, 90],
@@ -964,22 +1021,27 @@ def test_segment_recitations():
     wav = read_audio(file_path)
     print(wav.shape)
 
-    output = segment_recitations(
+    samples_out = segment_recitations(
         [wav],
         model,
         processor,
-        return_seconds=True,
         device=device,
         dtype=dtype,
-        min_silence_duration_ms=30,
-        min_speech_duration_ms=30,
-        pad_duration_ms=30,
         batch_size=1,
         max_duration_ms=2000,
     )
 
-    print(output[0].clean_speech_intervals)
-    assert output[0].clean_speech_intervals.shape == (1, 2)
+    output = clean_speech_intervals(
+        samples_out[0].speech_intervals,
+        samples_out[0].is_complete,
+        min_silence_duration_ms=30,
+        min_speech_duration_ms=30,
+        pad_duration_ms=30,
+        return_seconds=True,
+    )
+
+    print(output.clean_speech_intervals)
+    assert output.clean_speech_intervals.shape == (1, 2)
 
 
 def test_cli():
