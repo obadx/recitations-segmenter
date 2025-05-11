@@ -7,6 +7,9 @@
     <img src="https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg" alt="Tests">
   </a>
   <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white" alt="Python versions">
+  <a href="https://colab.research.google.com/drive/1-RuRQOj4l2MA_SG2p4m-afR7MAsT5I22?usp=sharing" style="display: inline;">
+    <img src="https://img.shields.io/badge/Google%20Colab-Open%20in%20Colab-F9AB00?logo=google-colab&logoColor=white" alt="Google Colab">
+  </a>
 </p>
 
 A Machine Learning Model that split a recitations on pauses (وقف) not by Ayah.
