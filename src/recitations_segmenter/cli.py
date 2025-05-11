@@ -257,8 +257,8 @@ def main():
             with open(output_path, "w+") as f:
                 json.dump(json_data, f, indent=4)
         except Exception as e:
-            warnings.warn(f'There were an error while processing file: {
-                          file_path.absolute()}. {e}', UserWarning)
+            warnings.warn(
+                f'There were an error while processing file: {file_path.absolute()}. {e}', UserWarning)
 
     if len(outputs) == 1:
         print('Speech Intervals:')
