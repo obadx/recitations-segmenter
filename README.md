@@ -1,16 +1,13 @@
 # recitations-segmenter
 
-[![Tests](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml)
-[![Python 3.10](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg?query=job%3A%22Python+3.10%22)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml?query=job%3A%22Python+3.10%22)
-[![Python 3.11](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg?query=job%3A%22Python+3.11%22)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml?query=job%3A%22Python+3.11%22)
-[![Python 3.12](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg?query=job%3A%22Python+3.12%22)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml?query=job%3A%22Python+3.12%22)
-[![Python 3.13](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg?query=job%3A%22Python+3.13%22)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml?query=job%3A%22Python+3.13%22)
+<!-- [![Tests](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml) -->
 
-<div align="center">
-    [![Tests](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg)](https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml)
-    <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white" alt="Python versions">
-</div>
-
+<p align="center">
+  <a href="https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml">
+    <img src="https://github.com/obadx/recitations-segmenter/actions/workflows/tests.yml/badge.svg" alt="Tests">
+  </a>
+  <img src="https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white" alt="Python versions">
+</p>
 
 A Machine Learning Model that split a recitations on pauses (وقف) not by Ayah.
 
