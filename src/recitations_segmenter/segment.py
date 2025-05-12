@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Sequence
+from typing import Sequence, Optional
 import warnings
+from pathlib import Path
 
 import torch
 import torchaudio
@@ -461,6 +462,8 @@ def segment_recitations(
     max_duration_ms=19995,
     speech_label=1,
     silence_label=0,
+    cache_dir: Optional[str | Path] = None,
+    overwrite_cache: Optional[bool] = False,
 ) -> list[W2vBSegmentationOutput]:
     """Segment The Holy Quran rectiations into speech intervals based on وقف using Wav2Vec2Bert model.
 
@@ -478,6 +481,10 @@ def segment_recitations(
         silence_label: Class index for silence segments
         device: Torch device for inference
         dtype: Data type for model computation only. for post processing we use `torch.float32`
+        cach_dir (Optional[str | Path]): Optional feature disables by default: if it is not `None`.
+            Saving speech intervals to the `cach_dir` so next time for inference with the
+            sample input `waves` we did not have to recompute the speech_intervals
+        overwrite_cache (Optional[bool]): if there exists a `cache_dir` overwrite it.
 
     Returns:
         list[W2vBSegmentationOutput]:
@@ -504,9 +511,36 @@ def segment_recitations(
         warnings.warn(
             'To get best resutls we recommend using `max_duration_ms` with 19995', UserWarning)
 
+    # if the user specifies the cache directory bypass the processing
+    # (model inference) and speech intervals calculations
+    if cache_dir and not overwrite_cache:
+        files = list(Path(cache_dir).glob('*.pt'))
+        if files:
+            assert len(files) == 1, (
+                f'`cache_dir` must contain single file only, we got: {len(files)}')
+            cache_waves_len = int(files[0].stem.split('_')[-1])
+            assert cache_waves_len == len(waves), (
+                f'The `cache_dir` does not belong to the input `waves` as the len of `waves`'
+                f' is: {len(waves)} and the len of waves in the cache_dir is: {cache_waves_len}')
+
+            print('Loading from speech intervals form `cache_dir`...')
+            # loading cached data
+            data = torch.load(files[0])
+            outputs = []
+            for idx in range(len(data['is_complete'])):
+                out = W2vBSegmentationOutput(
+                    clean_speech_intervals=None,
+                    speech_intervals=data['speech_intervals'][idx],
+                    probs=None,
+                    is_complete=data['is_complete'][idx],
+                )
+                outputs.append(out)
+            return outputs
+
     # checking if the dtype is supported by the GPU or not
     is_dtype_supported(dtype, device)
 
+    # checking device
     model_device = next(model.parameters()).device
     assert check_devices(model_device, device), (
         f"Device mismatch!. Model Device: {model_device}, Device: {device}")
@@ -573,5 +607,16 @@ def segment_recitations(
             return_probabilities=return_probabilities,
         )
         outputs.append(out)
+
+    # Caching outputs to save recomputing model weights
+    if cache_dir:
+        data_to_save = {
+            'speech_intervals': [o.speech_intervals for o in outputs],
+            'is_complete': [o.is_complete for o in outputs],
+        }
+        Path(cache_dir).mkdir(exist_ok=True)
+        # adding waves len as check sum
+        torch.save(data_to_save, Path(cache_dir) /
+                   f'speech_intervals_cache_{len(waves)}.pt')
 
     return outputs
