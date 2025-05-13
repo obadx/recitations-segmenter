@@ -343,13 +343,8 @@ def batchify_input(
                 wav_chunks.shape[0], :] = wav_chunks
         occupied_len += wav_chunks.shape[0]
 
-        idx_end = occupied_len % max_batch_size
+        idx_end = (occupied_len - 1) % max_batch_size + 1
         batch_end = (occupied_len - 1) // max_batch_size + 1
-
-        # the case that the len of new wav chunck is the same as max_batch_size
-        # and idx_start == 0 (it will bug if idx_end is 0 it has to be max_batch_size
-        if idx_start == 0 and idx_end == 0:
-            idx_end = max_batch_size
 
         wav_infos.append(WavInfo(
             wav_len=len(wav),

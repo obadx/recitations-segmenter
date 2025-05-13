@@ -219,6 +219,68 @@ class TestBatchify:
         with pytest.raises(AssertionError):
             wav_infos, batches = batchify_input(waves, max_len, batch_size)
 
+    def test_multiple_waveforms_real_case_batch_end(self):
+        wave1 = torch.ones(2160849)
+        wave2 = torch.ones(84428)
+        waves = [wave1, wave2]
+        max_len = 19995 * 16  # 319920
+        batch_size = 8
+        wav_infos, batches = batchify_input(waves, max_len, batch_size)
+
+        # Validate first waveform
+        info1 = wav_infos[0]
+        assert info1 == WavInfo(
+            wav_len=len(wave1),
+            batch_start=0,
+            batch_end=1,
+            idx_in_batch_start=0,
+            idx_in_batch_end=7,
+        )
+
+        # Validate second waveform
+        info2 = wav_infos[1]
+        assert info2 == WavInfo(
+            wav_len=len(wave2),
+            batch_start=0,
+            batch_end=1,
+            idx_in_batch_start=7,
+            idx_in_batch_end=8
+        )
+
+        assert len(batches) == 1
+        assert batches[0].shape == (batch_size, max_len)
+
+    def test_multiple_waveforms_2_batch_end(self):
+        wave1 = torch.ones(53)
+        wave2 = torch.ones(11)
+        waves = [wave1, wave2]
+        max_len = 10
+        batch_size = 4
+        wav_infos, batches = batchify_input(waves, max_len, batch_size)
+
+        # Validate first waveform
+        info1 = wav_infos[0]
+        assert info1 == WavInfo(
+            wav_len=len(wave1),
+            batch_start=0,
+            batch_end=2,
+            idx_in_batch_start=0,
+            idx_in_batch_end=2,
+        )
+
+        # Validate second waveform
+        info2 = wav_infos[1]
+        assert info2 == WavInfo(
+            wav_len=len(wave2),
+            batch_start=1,
+            batch_end=2,
+            idx_in_batch_start=2,
+            idx_in_batch_end=4
+        )
+
+        assert len(batches) == 2
+        assert batches[0].shape == (batch_size, max_len)
+
 
 class TestCollect:
     processor = AutoFeatureExtractor.from_pretrained('facebook/w2v-bert-2.0')
