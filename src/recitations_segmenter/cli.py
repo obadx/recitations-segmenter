@@ -225,6 +225,7 @@ def main():
         dtype=dtype,
     )
 
+    clean_out = None
     # Get the result (assuming one output per file)
     for out, file_path in zip(outputs, valid_pathes):
 
@@ -260,9 +261,9 @@ def main():
             warnings.warn(
                 f'There were an error while processing file: {file_path.absolute()}. {e}', UserWarning)
 
-    if len(outputs) == 1:
+    if len(outputs) == 1 and clean_out:
         print('Speech Intervals:')
-        print(outputs[0].clean_speech_intervals)
+        print(clean_out.clean_speech_intervals)
 
 
 if __name__ == "__main__":
