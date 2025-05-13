@@ -115,11 +115,11 @@ Return intervals in samples according to 16000 sampling rate.
     model_group.add_argument(
         "--batch-size",
         type=int,
-        default=64,
+        default=8,
         help="""\
 Number of audio chunks processed simultaneously
-- Higher values may increase speed but require more GPU memory
-- Default: %(default)d"""
+- Higher values may increase speed but require more GPU memory.
+- Default: %(default)d which occupies nearly 3GB of GPU memory."""
     )
     model_group.add_argument(
         "--max-duration-ms",
