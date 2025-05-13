@@ -29,18 +29,18 @@ if __name__ == '__main__':
         dtype=dtype,
         batch_size=4,
         cache_dir=cach_dir,
-        overwrite_cache=False,
+        overwrite_cache=True,
     )
 
-    # Clean The speech intervals by:
-    # * merging small silence durations
-    # * remove small speech durations
-    # * add padding to each speech duration
-    # Raises:
-    # * NoSpeechIntervals: if the wav is complete silence
-    # * TooHighMinSpeechDruation: if `min_speech_duration` is too high which
-    # resuls for deleting all speech intervals
     for out, path in zip(sampled_outputs, file_pathes):
+        # Clean The speech intervals by:
+        # * merging small silence durations
+        # * remove small speech durations
+        # * add padding to each speech duration
+        # Raises:
+        # * NoSpeechIntervals: if the wav is complete silence
+        # * TooHighMinSpeechDruation: if `min_speech_duration` is too high which
+        # resuls for deleting all speech intervals
         clean_out = clean_speech_intervals(
             out.speech_intervals,
             out.is_complete,
