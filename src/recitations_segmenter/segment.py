@@ -483,8 +483,8 @@ def segment_recitations(
 
     Returns:
         list[W2vBSegmentationOutput]:
-        - clean_speech_intervals: Tensor of shape (N, 2) containing speech intervals after filtering.
-            Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
+        Every `W2vBSegmentationOutput` is:
+        - clean_speech_intervals: `None`
         - speech_intervals: Tensor of shape (N, 2) containing raw speech intervals before filtering.
             Format: `[[speech_start, speech_end], [speech_start, speech_end], ...]` in samples.
         - probs: Class probabilities (None if not requested)
