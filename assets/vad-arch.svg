@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Title -->
+  <text x="500" y="30" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold">Voice Activity Detection (VAD) Approaches</text>
+  
+  <!-- Left side - Traditional VAD approach -->
+  <text x="250" y="70" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Traditional VAD (Frame-wise Classification)</text>
+  <text x="250" y="95" font-family="Arial" font-size="14" text-anchor="middle" font-style="italic">(e.g., Silero-VAD, PyAnnotate VAD)</text>
+  
+  <!-- Input audio frames - Left -->
+  <rect x="50" y="120" width="400" height="60" fill="#e6f2ff" stroke="#000" stroke-width="2"/>
+  <text x="250" y="130" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Input Audio Frames</text>
+  
+  <!-- Audio frame boxes - Left -->
+  <rect x="70" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="85" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame1</text>
+  
+  <rect x="120" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="135" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame2</text>
+  
+  <rect x="170" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="185" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame3</text>
+  
+  <rect x="220" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="235" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame4</text>
+  
+  <rect x="270" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="285" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame5</text>
+  
+  <rect x="320" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="335" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame6</text>
+  
+  <rect x="370" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="385" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame7</text>
+  
+  <!-- Model replicas - Left -->
+  <rect x="70" y="230" width="30" height="40" fill="#d9f2e6" stroke="#000" rx="5" ry="5"/>
+  <text x="85" y="255" font-family="Arial" font-size="10" text-anchor="middle">Model</text>
+  
+  <rect x="120" y="230" width="30" height="40" fill="#d9f2e6" stroke="#000" rx="5" ry="5"/>
+  <text x="135" y="255" font-family="Arial" font-size="10" text-anchor="middle">Model</text>
+  
+  <rect x="170" y="230" width="30" height="40" fill="#d9f2e6" stroke="#000" rx="5" ry="5"/>
+  <text x="185" y="255" font-family="Arial" font-size="10" text-anchor="middle">Model</text>
+  
+  <rect x="220" y="230" width="30" height="40" fill="#d9f2e6" stroke="#000" rx="5" ry="5"/>
+  <text x="235" y="255" font-family="Arial" font-size="10" text-anchor="middle">Model</text>
+  
+  <rect x="270" y="230" width="30" height="40" fill="#d9f2e6" stroke="#000" rx="5" ry="5"/>
+  <text x="285" y="255" font-family="Arial" font-size="10" text-anchor="middle">Model</text>
+  
+  <rect x="320" y="230" width="30" height="40" fill="#d9f2e6" stroke="#000" rx="5" ry="5"/>
+  <text x="335" y="255" font-family="Arial" font-size="10" text-anchor="middle">Model</text>
+  
+  <rect x="370" y="230" width="30" height="40" fill="#d9f2e6" stroke="#000" rx="5" ry="5"/>
+  <text x="385" y="255" font-family="Arial" font-size="10" text-anchor="middle">Model</text>
+  
+  <!-- Arrows from audio frames to models - Left -->
+  <line x1="85" y1="170" x2="85" y2="230" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="135" y1="170" x2="135" y2="230" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="185" y1="170" x2="185" y2="230" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="235" y1="170" x2="235" y2="230" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="285" y1="170" x2="285" y2="230" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="335" y1="170" x2="335" y2="230" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="385" y1="170" x2="385" y2="230" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  
+  <!-- Output classification - Left -->
+  <rect x="70" y="320" width="30" height="30" fill="#ffcccc" stroke="#000"/>
+  <text x="85" y="340" font-family="Arial" font-size="10" text-anchor="middle">Speech</text>
+  
+  <rect x="120" y="320" width="30" height="30" fill="#ffcccc" stroke="#000"/>
+  <text x="135" y="340" font-family="Arial" font-size="10" text-anchor="middle">Speech</text>
+  
+  <rect x="170" y="320" width="30" height="30" fill="#e6e6e6" stroke="#000"/>
+  <text x="185" y="340" font-family="Arial" font-size="10" text-anchor="middle">Silence</text>
+  
+  <rect x="220" y="320" width="30" height="30" fill="#e6e6e6" stroke="#000"/>
+  <text x="235" y="340" font-family="Arial" font-size="10" text-anchor="middle">Silence</text>
+  
+  <rect x="270" y="320" width="30" height="30" fill="#ffcccc" stroke="#000"/>
+  <text x="285" y="340" font-family="Arial" font-size="10" text-anchor="middle">Speech</text>
+  
+  <rect x="320" y="320" width="30" height="30" fill="#ffcccc" stroke="#000"/>
+  <text x="335" y="340" font-family="Arial" font-size="10" text-anchor="middle">Speech</text>
+  
+  <rect x="370" y="320" width="30" height="30" fill="#e6e6e6" stroke="#000"/>
+  <text x="385" y="340" font-family="Arial" font-size="10" text-anchor="middle">Silence</text>
+  
+  <!-- Arrows from models to output - Left -->
+  <line x1="85" y1="270" x2="85" y2="320" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="135" y1="270" x2="135" y2="320" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="185" y1="270" x2="185" y2="320" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="235" y1="270" x2="235" y2="320" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="285" y1="270" x2="285" y2="320" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="335" y1="270" x2="335" y2="320" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="385" y1="270" x2="385" y2="320" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  
+  <!-- Description text - Left -->
+  <text x="250" y="390" font-family="Arial" font-size="14" text-anchor="middle">Frame-wise classification: Each audio frame</text>
+  <text x="250" y="410" font-family="Arial" font-size="14" text-anchor="middle">is processed by a separate model instance</text>
+  <text x="250" y="430" font-family="Arial" font-size="14" text-anchor="middle">Less GPU efficient</text>
+  
+  <!-- Right side - w2v2Bert approach -->
+  <text x="750" y="70" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">w2v2Bert Sequence Labeling Approach (ours)</text>
+  <text x="750" y="95" font-family="Arial" font-size="14" text-anchor="middle" font-style="italic">(Better for offline VAD with improved GPU utilization)</text>
+  
+  <!-- Input audio frames - Right -->
+  <rect x="550" y="120" width="400" height="60" fill="#e6f2ff" stroke="#000" stroke-width="2"/>
+  <text x="750" y="130" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Input Audio Frames</text>
+  
+  <!-- Audio frame boxes - Right -->
+  <rect x="570" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="585" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame1</text>
+  
+  <rect x="620" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="635" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame2</text>
+  
+  <rect x="670" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="685" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame3</text>
+  
+  <rect x="720" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="735" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame4</text>
+  
+  <rect x="770" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="785" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame5</text>
+  
+  <rect x="820" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="835" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame6</text>
+  
+  <rect x="870" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
+  <text x="885" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame7</text>
+  
+  <!-- Single w2v2Bert model - Right -->
+  <rect x="650" y="230" width="200" height="60" fill="#d9f2e6" stroke="#000" rx="10" ry="10"/>
+  <text x="750" y="255" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">w2v2Bert Model (ours)</text>
+  <text x="750" y="275" font-family="Arial" font-size="12" text-anchor="middle">(Single model for all frames)</text>
+  
+  <!-- Arrow from all audio frames to single model - Right -->
+  <path d="M750,190 Q750,210 750,230" stroke="#000" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Output classification - Right -->
+  <rect x="570" y="340" width="30" height="30" fill="#ffcccc" stroke="#000"/>
+  <text x="585" y="360" font-family="Arial" font-size="10" text-anchor="middle">Speech</text>
+  
+  <rect x="620" y="340" width="30" height="30" fill="#ffcccc" stroke="#000"/>
+  <text x="635" y="360" font-family="Arial" font-size="10" text-anchor="middle">Speech</text>
+  
+  <rect x="670" y="340" width="30" height="30" fill="#e6e6e6" stroke="#000"/>
+  <text x="685" y="360" font-family="Arial" font-size="10" text-anchor="middle">Silence</text>
+  
+  <rect x="720" y="340" width="30" height="30" fill="#e6e6e6" stroke="#000"/>
+  <text x="735" y="360" font-family="Arial" font-size="10" text-anchor="middle">Silence</text>
+  
+  <rect x="770" y="340" width="30" height="30" fill="#ffcccc" stroke="#000"/>
+  <text x="785" y="360" font-family="Arial" font-size="10" text-anchor="middle">Speech</text>
+  
+  <rect x="820" y="340" width="30" height="30" fill="#ffcccc" stroke="#000"/>
+  <text x="835" y="360" font-family="Arial" font-size="10" text-anchor="middle">Speech</text>
+  
+  <rect x="870" y="340" width="30" height="30" fill="#e6e6e6" stroke="#000"/>
+  <text x="885" y="360" font-family="Arial" font-size="10" text-anchor="middle">Silence</text>
+  
+  <!-- Arrows from single model to all outputs - Right -->
+  <line x1="650" y1="290" x2="585" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="670" y1="290" x2="635" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="690" y1="290" x2="685" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="710" y1="290" x2="735" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="730" y1="290" x2="785" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="770" y1="290" x2="835" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="830" y1="290" x2="885" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  
+  <!-- Description text - Right -->
+  <text x="750" y="390" font-family="Arial" font-size="14" text-anchor="middle">Sequence labeling: All audio frames processed</text>
+  <text x="750" y="410" font-family="Arial" font-size="14" text-anchor="middle">by a single model at once</text>
+  <text x="750" y="430" font-family="Arial" font-size="14" text-anchor="middle">Better GPU utilization and accuracy</text>
+  
+  <!-- Separator -->
+  <line x1="500" y1="70" x2="500" y2="450" stroke="#000" stroke-width="1" stroke-dasharray="5,5"/>
+  
+  <!-- Arrow definitions -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#000"/>
+    </marker>
+  </defs>
+</svg>
