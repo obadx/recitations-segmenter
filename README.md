@@ -5,9 +5,10 @@
 
 [![Tests][tests-badge]][tests-url]
 [![PyPI][pypi-badge]][pypi-url]
-[![MIT License][mit-badge]][mit-url]
 [![Python Versions][python-badge]][python-url]
+[![Hugging Face][hf-badge]][hf-url]
 [![Google Colab][colab-badge]][colab-url]
+[![MIT License][mit-badge]][mit-url]
 
 </div>
 
@@ -21,6 +22,8 @@
 [python-url]: https://pypi.org/project/recitations-segmenter/
 [colab-badge]: https://img.shields.io/badge/Google%20Colab-Open%20in%20Colab-F9AB00?logo=google-colab&logoColor=white
 [colab-url]: https://colab.research.google.com/drive/1-RuRQOj4l2MA_SG2p4m-afR7MAsT5I22?usp=sharing
+[hf-badge]: https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-blue
+[hf-url]: https://huggingface.co/obadx/recitation-segmenter-v2
 
 
 
@@ -41,10 +44,35 @@
 
 * يستطيع تقطيع  التلاوات القرآنية لأي مدة من التلاوات من بضع دقايق إلى عدة ساعات من غير نقص في الأداء
 
-  
+## النموذج على Hugging Face 🤗
+* [النموذج](https://huggingface.co/obadx/recitation-segmenter-v2)
+* [بيانات التدريب] (https://huggingface.co/datasets/obadx/recitation-segmentation)
+* [بيانات التدريب مع إضافة augmentation](https://huggingface.co/datasets/obadx/recitation-segmentation-augmented)
 
+<!-- TOC -->
+<!-- vim-markdown-toc Marked -->
+## قائمة المحتويات
 
+* [تثبيت المكتبة](#تثبيت-المكتبة)
+    * [متطلبات التثبيت](#متطلبات-التثبيت)
+    * [تثبيت المكتبة](#تثبيت-المكتبة)
+* [API  باستخدام Python](#api-باستخدام-python)
+* [Command Line Interface](#command-line-interface)
+    * [وصف مفصل لل Command Line](#وصف-مفصل-لل-command-line)
+* [توثيق المكتبة (API Refernece)](#توثيق-المكتبة-(api-refernece))
+* [تفاصيل التدريب](#تفاصيل-التدريب)
+    * [دوافع تدريب نموذج جديد وعدم استخدام الطرق الحالية](#دوافع-تدريب-نموذج-جديد-وعدم-استخدام-الطرق-الحالية)
+    * [طريقة حل المشكلة](#طريقة-حل-المشكلة)
+    * [تهيئة بيئة التطوير](#تهيئة-بيئة-التطوير)
+    * [بيانات التدريب](#بيانات-التدريب)
+    * [طريقة تجميع البيانات](#طريقة-تجميع-البيانات)
+    * [تهيئة البيانات](#تهيئة-البيانات)
+    * [التدريب](#التدريب)
+    * [النتائج:](#النتائج:)
+* [ملاحظات مهمة](#ملاحظات-مهمة)
+* [TODO](#todo)
 
+<!-- vim-markdown-toc -->
 
 ## تثبيت المكتبة
 
@@ -85,6 +113,74 @@ pip install recitations-segmenter
 ```bash
 uv add recitations-segmenter
 ```
+
+## API  باستخدام Python
+
+موضح أدناه مثال كامل لاتسخدام المكتبة بال python ويوجد أيضا مثال داخل Google Colab:
+
+[![Google Colab][colab-badge]][colab-url]
+
+```python
+from pathlib import Path
+
+from recitations_segmenter import segment_recitations, read_audio, clean_speech_intervals
+from transformers import AutoFeatureExtractor, AutoModelForAudioFrameClassification
+import torch
+
+if __name__ == '__main__':
+    device = torch.device('cuda')
+    dtype = torch.bfloat16
+
+    processor = AutoFeatureExtractor.from_pretrained(
+        "obadx/recitation-segmenter-v2")
+    model = AutoModelForAudioFrameClassification.from_pretrained(
+        "obadx/recitation-segmenter-v2",
+    )
+
+    model.to(device, dtype=dtype)
+
+    # Change this to the file pathes of Holy Quran recitations
+    # File pathes with the Holy Quran Recitations
+    file_pathes = [
+        './assets/dussary_002282.mp3',
+        './assets/hussary_053001.mp3',
+    ]
+    waves = [read_audio(p) for p in file_pathes]
+
+    # Extracting speech inervals in samples according to 16000 Sample rate
+    sampled_outputs = segment_recitations(
+        waves,
+        model,
+        processor,
+        device=device,
+        dtype=dtype,
+        batch_size=8,
+    )
+
+    for out, path in zip(sampled_outputs, file_pathes):
+        # Clean The speech intervals by:
+        # * merging small silence durations
+        # * remove small speech durations
+        # * add padding to each speech duration
+        # Raises:
+        # * NoSpeechIntervals: if the wav is complete silence
+        # * TooHighMinSpeechDruation: if `min_speech_duration` is too high which
+        # resuls for deleting all speech intervals
+        clean_out = clean_speech_intervals(
+            out.speech_intervals,
+            out.is_complete,
+            min_silence_duration_ms=30,
+            min_speech_duration_ms=30,
+            pad_duration_ms=30,
+            return_seconds=True,
+        )
+
+        print(f'Speech Intervals of: {Path(path).name}: ')
+        print(clean_out.clean_speech_intervals)
+        print(f'Is Recitation Complete: {clean_out.is_complete}')
+        print('-' * 40)
+```
+
 
 
 ## Command Line Interface
@@ -289,74 +385,8 @@ Error Handling:
 ```
 
 
-## API  باستخدام Python
 
-موضح أدناه مثال كامل لاتسخدام المكتبة بال python ويوجد أيضا مثال داخل Google Colab:
-
-[![Google Colab][colab-badge]][colab-url]
-
-```python
-from pathlib import Path
-
-from recitations_segmenter import segment_recitations, read_audio, clean_speech_intervals
-from transformers import AutoFeatureExtractor, AutoModelForAudioFrameClassification
-import torch
-
-if __name__ == '__main__':
-    device = torch.device('cuda')
-    dtype = torch.bfloat16
-
-    processor = AutoFeatureExtractor.from_pretrained(
-        "obadx/recitation-segmenter-v2")
-    model = AutoModelForAudioFrameClassification.from_pretrained(
-        "obadx/recitation-segmenter-v2",
-    )
-
-    model.to(device, dtype=dtype)
-
-    # Change this to the file pathes of Holy Quran recitations
-    # File pathes with the Holy Quran Recitations
-    file_pathes = [
-        './assets/dussary_002282.mp3',
-        './assets/hussary_053001.mp3',
-    ]
-    waves = [read_audio(p) for p in file_pathes]
-
-    # Extracting speech inervals in samples according to 16000 Sample rate
-    sampled_outputs = segment_recitations(
-        waves,
-        model,
-        processor,
-        device=device,
-        dtype=dtype,
-        batch_size=8,
-    )
-
-    for out, path in zip(sampled_outputs, file_pathes):
-        # Clean The speech intervals by:
-        # * merging small silence durations
-        # * remove small speech durations
-        # * add padding to each speech duration
-        # Raises:
-        # * NoSpeechIntervals: if the wav is complete silence
-        # * TooHighMinSpeechDruation: if `min_speech_duration` is too high which
-        # resuls for deleting all speech intervals
-        clean_out = clean_speech_intervals(
-            out.speech_intervals,
-            out.is_complete,
-            min_silence_duration_ms=30,
-            min_speech_duration_ms=30,
-            pad_duration_ms=30,
-            return_seconds=True,
-        )
-
-        print(f'Speech Intervals of: {Path(path).name}: ')
-        print(clean_out.clean_speech_intervals)
-        print(f'Is Recitation Complete: {clean_out.is_complete}')
-        print('-' * 40)
-```
-
-## توقيق المكتبة (API Refernece)
+## توثيق المكتبة (API Refernece)
 
 ### `segment_recitations`
 
@@ -524,83 +554,261 @@ First of all glone the repo
 git clone https://github.com/obadx/recitations-segmenter.git
 ```
 
-To fully reproduce an environment using a `uv.lock` file, follow these steps:
+```bash
+cd recitations-segmenter
+```
 
-##### 1. **Install `uv`**
-   First, ensure the `uv` tool is installed. You can install it using the official installation script:
-   ```bash
-   curl -LsSf https://install.python-uv.dev | sh
-   ```
-   This installs `uv` into your system. Verify the installation:
-   ```bash
-   uv --version
-   ```
-
-##### 2. **Create virtual environment**
-
-We are using python version `3.12`
+Create conda environment with python 3.12
 
 ```bash
-uv venv --python 3.12
+conda create -n segment12 python=3.12
+conda activate segment12
 ```
-   
 
-##### 3. **Recreate the Environment**
-   In the project directory containing both `pyproject.toml` and `uv.lock`, run:
-   
-   ```bash
-   uv sync
-   ```
-   
-   This command:
-   - Uses `uv.lock` to install **exact versions** of all dependencies (including transitive ones).
-   - Creates a virtual environment in `.venv/` by default.
-   - Installs dependencies into the virtual environment.
 
-   **Note**: `uv.sync` requires `pyproject.toml` to identify direct dependencies. If you only have `uv.lock`, recreate `pyproject.toml` by listing direct dependencies manually or extract them from the lock file.
+> Note: for data builindg we worked on python 3.13 and for augmentations we worked to python 3.12 due to audiomentatiosn depends on scipy
 
-### 4. **Activate the Virtual Environment**
-   After installation, activate the virtual environment:
-   ```bash
-   source .venv/bin/activate  # On Unix/macOS
-   .venv\Scripts\activate     # On Windows
-   ```
+Install `ffmbeg` and `scipy` using conda
 
-### 5. **Verify the Environment**
-   Confirm the environment is set up correctly:
-   ```bash
-   python -m pip list  # Should show packages from uv.lock
-   ```
+```bash
+conda install -c conda-forge ffmpeg scipy=1.15.2
+
+```
+
+Install our package
+
+```bash
+pip install -e ./[agument]
+```
+
 
 ### بيانات التدريب
 
 ### طريقة تجميع البيانات
 
+* كان أفضل ال VAD أداءا هو [sliero-vad-v4](https://github.com/snakers4/silero-vad/tree/v4.0stable) فتم اختيار المصاحف القرآنية من [everyayh](everyayah.com)
+* وبعد ذلك تم عمل دالة تقوم بتعويض عيوب النموذج عن طريق إضافة:
+  - `min_silence_duration_ms`: تقوم بدمج المقاطع التي تحتوي على صمت مع المقاطع اللتي تحتوي على صوت
+  - `min_speech_duration_ms`: تقوم بحذف المقاطع اللتي تحتوي على صوت
+  ومع أيضا بعض المتغيرات الأخرى انظر [هنا](./src/recitations_segmenter/train/vad_utils.py)
+  * وبعد ذلك تم تحديد تلك المتغيرات يدويا لتقسم التلاوت بدقة واستبعاد التلاوات التي فشل sliro-vad-v4 فيها
+  * ومن ثم استقر التجميع على تلك [المصاحف](./recitations.yml)
+  
+  ```yml
+  recitations:
+    - reciter_name: محمود خليل الحصري
+      id: 0
+      url: https://everyayah.com/data/Husary_128kbps/000_versebyverse.zip
+      window_size_samples: 1536
+      threshold: 0.3
+      min_silence_duration_ms: 500
+      min_speech_duration_ms: 1000
+      pad_duration_ms: 40
+  
+    - reciter_name: محمد صديق المنشاوي
+      id: 1
+      url: https://everyayah.com/data/Minshawy_Murattal_128kbps/000_versebyverse.zip
+      window_size_samples: 1536
+      threshold: 0.3
+      min_silence_duration_ms: 400
+      min_speech_duration_ms: 1000
+      pad_duration_ms: 20
+  
+    - reciter_name: عبد الباسط عبد الصمد
+      id: 2
+      url: https://everyayah.com/data/Abdul_Basit_Murattal_192kbps/000_versebyverse.zip
+      window_size_samples: 1536
+      threshold: 0.3
+      min_silence_duration_ms: 400
+      min_speech_duration_ms: 700
+      pad_duration_ms: 20
+  
+  
+    - reciter_name: محمود علي البنا
+      id: 3
+      url: https://everyayah.com/data/mahmoud_ali_al_banna_32kbps/000_versebyverse.zip
+      window_size_samples: 1536
+      threshold: 0.3
+      min_silence_duration_ms: 400
+      min_speech_duration_ms: 700
+      pad_duration_ms: 20
+      
+    - reciter_name: على الحذيفي
+      id: 5
+      url: https://everyayah.com/data/Hudhaify_128kbps/000_versebyverse.zip
+      window_size_samples: 1536
+      threshold: 0.3
+      min_silence_duration_ms: 350
+      min_speech_duration_ms: 700
+      pad_duration_ms: 5
+  
+    - reciter_name: أيمن رشدي سويد
+      id: 6
+      url: https://everyayah.com/data/Ayman_Sowaid_64kbps/000_versebyverse.zip
+      window_size_samples: 1536
+      threshold: 0.3
+      min_silence_duration_ms: 500
+      min_speech_duration_ms: 1000
+      pad_duration_ms: 10
+  
+    - reciter_name: محمد أيوب
+      id: 7
+      url: https://everyayah.com/data/Muhammad_Ayyoub_128kbps/000_versebyverse.zip
+      window_size_samples: 1536
+      threshold: 0.3
+      min_silence_duration_ms: 400
+      min_speech_duration_ms: 1000
+      pad_duration_ms: 10
+  
+  
+    - reciter_name: إبراهيم الأخضر
+      id: 8
+      url: https://everyayah.com/data/Ibrahim_Akhdar_32kbps/000_versebyverse.zip
+      window_size_samples: 1536
+      threshold: 0.3
+      min_silence_duration_ms: 390
+      min_speech_duration_ms: 700
+      pad_duration_ms: 30
+  ```
+
 ### تهيئة البيانات
 
+1. تحميل المصاحف القرآنية وتحويلها لمصفوفات array بصيغة Hugging Face Audio Dataset بمعمدل (sample rate)   16000 HZ 
+2. تقسيم الآيات تبعا للوقف باستخدام sliro-vad-v4
+3. تطبيق تسريع وإبطاء لسرعة التلاوت على 40 % من التلاوات لمواكبة سرعات التلاوات المختلفة
+4. تطيبق data augmentations باتسخدام مكتبة [audumentations](https://github.com/iver56/audiomentations) متبعين نفس طريقة sliro-vad وإعدادات الل augmentattions موجودة [هنا](./augment_config.yml)
+
+5. ومن المعلوم أن w2v2Bert تدعم طول يصل إلى 100 ثانية. فقد وقع الاختيار على 20 ثانية.
+6. وبعد ذلك تم تقسيم الآيات الأطول من 20 ثانية باستخدام خوارزمية النافذة المتحركة sliding window لاستخدام كل بيانات التدريب وهذه صورة توضيحية لاختيار الطول الأقصى: 
+![durations-fig](./assets/durations_histogram.png)
+
+إعدادات ال augmentations: 
+
+
+```yml
+# Audio processing parameters
+min_size_samples: 32000       # Minimum audio length (2 seconds at 16kHz)
+max_size_samples: 320000      # Maximum audio length (20 seconds at 16kHz)
+truncate_window_overlap_length: 16000  # Overlap when splitting long audio
+
+# Spectrogram feature extraction
+window_length_samples: 400    # Window length for STFT
+hop_length_samples: 160       # Hop length for STFT
+sampling_rate: 16000          # Audio sample rate
+stride: 2                     # Convolution stride for feature extraction
+
+# Label configuration
+speech_label: 1               # Label for speech segments
+silence_label: 0              # Label for silence segments
+ignored_idx: -100             # Index to ignore in loss calculations
+
+# Model and processing
+model_id: facebook/w2v-bert-2.0  # Pre-trained model identifier
+batch-size: 32                # Batch size for processing
+samples-per-shard: 1024       # Samples per Parquet shard
+
+# Augmentation parameters
+seed: 1                       # Random seed for reproducibility
+min-stretch-ratio: 0.8        # Minimum time stretch ratio
+max-stretch-ratio: 1.5        # Maximum time stretch ratio
+augment-prob: 0.4             # Probability of applying augmentation
+
+```
+
+ال augmentations المستخدمة موجودة [هنا](./src/recitations_segmenter/train/augment.py):
+
+```python
+def build_audiomentations_augs(p=0.4, seed=42, all=False):
+    """taken form: https://github.com/snakers4/silero-vad/blob/master/tuning/utils.py#L37
+    """
+    # audiomentations usesd python random for its calculations
+    random.seed(seed)
+    np.random.seed(seed)
+
+    from audiomentations import (
+        SomeOf,
+        AirAbsorption,
+        BandPassFilter,
+        BandStopFilter,
+        ClippingDistortion,
+        HighPassFilter,
+        HighShelfFilter,
+        LowPassFilter,
+        LowShelfFilter,
+        Mp3Compression,
+        PeakingFilter,
+        PitchShift,
+        RoomSimulator,
+        SevenBandParametricEQ,
+        Aliasing,
+        AddGaussianNoise,
+        GainTransition,
+        Compose,
+    )
+    transforms = [
+        Aliasing(p=1),
+        AddGaussianNoise(p=1),
+        AirAbsorption(p=1),
+        BandPassFilter(p=1),
+        BandStopFilter(p=1),
+        ClippingDistortion(p=1),
+        HighPassFilter(p=1),
+        HighShelfFilter(p=1),
+        LowPassFilter(p=1),
+        LowShelfFilter(p=1),
+        Mp3Compression(p=1),
+        PeakingFilter(p=1),
+        PitchShift(p=1),
+        RoomSimulator(p=1, leave_length_unchanged=True),
+        SevenBandParametricEQ(p=1),
+        GainTransition(p=1, min_gain_db=-17),
+    ]
+    if all:
+        return Compose(transforms, p=p)
+    return SomeOf((1, 3), transforms=transforms, p=p)
+
+```
 ### التدريب
 
-## Installtion
+* تم التدريب بتوفيق الله سبحانه وتعالي على منصة [Lightning Studio](https://lightning.ai) باستخدام معالج رسوميات واحد من نوع Nvidia L40 (48GB) ولمدة ساعاتان تقريبا
+* تم التدريب على نموذج: `Wav2Vec2BertForAudioFrameClassification` .تم استخدام [هذا الكود](./train.py)
 
-> Note: for data builindg we worked on python 3.13 and for augmentations we worked to python 3.12 due to audiomentatiosn depends on scipy
-
-* Install `ffmbeg` using conda
-
-```bash
-conda install -c conda-forge ffmpeg
-```
-
-* Install `scipy` using anaconda
+قم بتنزيل متطلبات التدريب:
 
 ```bash
-conda install -c conda-forge scipy=1.15.2
+pip install -r train_requirements.txt
 ```
 
-## Chosing hypberparameters
+وبعد ذلك بتهيئة accelerate
 
-We have chosed the `max_recitaton_seconds` to be `20` secons and the rests of the samples will be split uising sliding window algorigh with overlap of `1` second
+```bash
+accelereate config
+```
 
-![durations-fig](./assets/durations_histogram.png)
+ومن ثم ابتدأ التدريب:
+
+```bash
+accelerate launch train.py
+```
+
+### النتائج:
+
+نتائج الاختبار على مصحف لم يتم التدريب عليه:
+
+| Metric     | Value  |
+|------------|--------|
+| Accuracy   | 0.9958 |
+| F1         | 0.9964 |
+| Loss       | 0.0132 |
+| Precision  | 0.9976 |
+| Recall     | 0.9951 |
+
+## ملاحظات مهمة
+
+* تم تهيئة البيانات على الحاسوب الفائق لمكتبة الأسكندرية [Bibliotheca Alexandrina (BA), HPC](https://hpc.bibalex.org/about) باستخدام أداة [slurm](https://slurm.schedmd.com/overview.html)
+* تم استخدام مكتبة [submitit](https://pypi.org/project/submitit/) لستهيل القيام بأكثر من علمية حسابية على الحاسب الفايق في نفس الوقت
+* جميع أكواد الحاسب الفائف المستخدمة في تهيئة البيانات موجودة [هنا](./hpc_scripts/)
+* المقسم يعتبر السكت وقفا ولا يعتبره سكتا وهذا يعتبر عيب.
 
 
 ## TODO
@@ -620,3 +828,4 @@ We have chosed the `max_recitaton_seconds` to be `20` secons and the rests of th
 * [x] Add libsoundfile and ffmbeg as backend for reading mp3 files
 * [ ] publish to pypip
 
+* [ ] update colab docs

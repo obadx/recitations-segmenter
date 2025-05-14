@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Static background to prevent dark mode effects -->
+  <rect x="0" y="0" width="1000" height="500" fill="white" />
+  
   <!-- Title -->
   <text x="500" y="30" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold">Voice Activity Detection (VAD) Approaches</text>
   
@@ -130,13 +133,13 @@
   <rect x="870" y="140" width="30" height="20" fill="#b3d9ff" stroke="#000"/>
   <text x="885" y="170" font-family="Arial" font-size="10" text-anchor="middle">Frame7</text>
   
-  <!-- Single w2v2Bert model - Right -->
-  <rect x="650" y="230" width="200" height="60" fill="#d9f2e6" stroke="#000" rx="10" ry="10"/>
+  <!-- Single w2v2Bert model - Right (now wider) -->
+  <rect x="550" y="230" width="350" height="60" fill="#d9f2e6" stroke="#000" rx="10" ry="10"/>
   <text x="750" y="255" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">w2v2Bert Model (ours)</text>
   <text x="750" y="275" font-family="Arial" font-size="12" text-anchor="middle">(Single model for all frames)</text>
   
-  <!-- Arrow from all audio frames to single model - Right -->
-  <path d="M750,190 Q750,210 750,230" stroke="#000" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  <!-- Arrow from all audio frames to single model - Right (now vertical) -->
+  <path d="M750,190 L750,230" stroke="#000" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
   
   <!-- Output classification - Right -->
   <rect x="570" y="340" width="30" height="30" fill="#ffcccc" stroke="#000"/>
@@ -160,14 +163,14 @@
   <rect x="870" y="340" width="30" height="30" fill="#e6e6e6" stroke="#000"/>
   <text x="885" y="360" font-family="Arial" font-size="10" text-anchor="middle">Silence</text>
   
-  <!-- Arrows from single model to all outputs - Right -->
-  <line x1="650" y1="290" x2="585" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-  <line x1="670" y1="290" x2="635" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-  <line x1="690" y1="290" x2="685" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-  <line x1="710" y1="290" x2="735" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-  <line x1="730" y1="290" x2="785" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-  <line x1="770" y1="290" x2="835" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
-  <line x1="830" y1="290" x2="885" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <!-- Arrows from single model to all outputs - Right (now vertical) -->
+  <line x1="585" y1="290" x2="585" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="635" y1="290" x2="635" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="685" y1="290" x2="685" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="735" y1="290" x2="735" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="785" y1="290" x2="785" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="835" y1="290" x2="835" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
+  <line x1="885" y1="290" x2="885" y2="340" stroke="#000" stroke-width="1.5" marker-end="url(#arrowhead)"/>
   
   <!-- Description text - Right -->
   <text x="750" y="390" font-family="Arial" font-size="14" text-anchor="middle">Sequence labeling: All audio frames processed</text>
