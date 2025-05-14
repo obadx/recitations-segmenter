@@ -1,3 +1,4 @@
+# Updated workflow with fixes
 name: Publish Package to PyPI
 
 on:
@@ -9,28 +10,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
+    - name: Clean build artifacts
+      run: rm -rf dist/  # Remove old builds
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.x'
-        
-    - name: Install build dependencies
+        python-version: '3.12'  # Use a specific version
+
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install build twine
-        
+
     - name: Build package
-      run: |
-        python -m build
-        
+      run: python -m build
+
     - name: Verify package
-      run: |
-        twine check dist/*
-        
+      run: python -m twine check dist/*
+
     - name: Publish to PyPI
       env:
         TWINE_USERNAME: __token__
         TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: |
-        twine upload dist/*
+        python -m twine upload --verbose dist/*  # Add --verbose for detailed logs
