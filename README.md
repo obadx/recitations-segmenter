@@ -49,8 +49,7 @@
 * [بيانات التدريب](https://huggingface.co/datasets/obadx/recitation-segmentation)
 * [بيانات التدريب مع إضافة augmentation](https://huggingface.co/datasets/obadx/recitation-segmentation-augmented)
 
-<!-- TOC -->
-<!-- vim-markdown-toc Marked -->
+<
 ## قائمة المحتويات
 
 * [تثبيت المكتبة](#تثبيت-المكتبة)
@@ -71,7 +70,6 @@
 * [ملاحظات مهمة](#ملاحظات-مهمة)
 
 
-<!-- vim-markdown-toc -->
 
 ## تثبيت المكتبة
 
