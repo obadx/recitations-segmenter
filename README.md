@@ -55,8 +55,8 @@
 
 * [تثبيت المكتبة](#تثبيت-المكتبة)
 
-* [API  باستخدام Python](#api-باستخدام-python)
-* [Command Line Interface](#command-line-interface)
+* [باستخدام Python](#api-باستخدام-python)
+* [واجهة Command Line Interface](#command-line-interface)
     * [وصف مفصل لل Command Line](#وصف-مفصل-لل-command-line)
 * [توثيق المكتبة (API Refernece)](#توثيق-المكتبة-(api-refernece))
 * [تفاصيل التدريب](#تفاصيل-التدريب)
@@ -804,7 +804,7 @@ accelerate launch train.py
 ## ملاحظات مهمة
 
 * تم تهيئة البيانات على الحاسوب الفائق لمكتبة الأسكندرية [Bibliotheca Alexandrina (BA), HPC](https://hpc.bibalex.org/about) باستخدام أداة [slurm](https://slurm.schedmd.com/overview.html)
-* تم استخدام مكتبة [submitit](https://pypi.org/project/submitit/) لستهيل القيام بأكثر من علمية حسابية على الحاسب الفايق في نفس الوقت
+* تم استخدام مكتبة [submitit](https://pypi.org/project/submitit/) لتسهيل القيام بأكثر من علمية حسابية على الحاسب الفايق في نفس الوقت
 * جميع أكواد الحاسب الفائف المستخدمة في تهيئة البيانات موجودة [هنا](./hpc_scripts/)
 * المقسم يعتبر السكت وقفا ولا يعتبره سكتا وهذا يعتبر عيب.
 
