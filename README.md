@@ -817,11 +817,11 @@ accelerate launch train.py
 * [x] Add caching mechanism.
 * [x] Project Description
 * [x] API docs
-* [ ] train docs
-* [ ] datasets docs (create and description)
+* [x] train docs
+* [x] datasets docs (create and description)
 * [x] Add lock file for reproudcing training
-* [ ] Steps to reprouduce Dev environment [see](https://chat.qwen.ai/s/75280423-a193-4f1b-a35b-93a5f8e03ff8?fev=0.0.87)
+* [x] Steps to reprouduce Dev environment [see](https://chat.qwen.ai/s/75280423-a193-4f1b-a35b-93a5f8e03ff8?fev=0.0.87)
 * [x] Add libsoundfile and ffmbeg as backend for reading mp3 files
-* [ ] publish to pypip
+* [x] publish to pypip
 
-* [ ] update colab docs
+* [x] update colab docs
