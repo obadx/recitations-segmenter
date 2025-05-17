@@ -15,4 +15,5 @@ bash /cluster/users/shams035u1/.bashrc
 source /cluster/users/shams035u1/data/miniconda3/bin/activate
 conda activate segment12
 
+cd ../
 python tests/all_modules_wihout_cache.py
